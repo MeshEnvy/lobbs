@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lobbs.pb.h"
-#include "lodb/LoDB.h"
+#include "../lodb/LoDB.h"
 #include <stdint.h>
 #include <vector>
 
