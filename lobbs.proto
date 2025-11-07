@@ -1,0 +1,140 @@
+syntax = "proto3";
+
+package meshtastic;
+
+option csharp_namespace = "Meshtastic.Protobufs";
+option go_package = "github.com/meshtastic/go/generated";
+option java_outer_classname = "LoBBSProtos";
+option java_package = "com.geeksville.mesh";
+option swift_prefix = "";
+
+/*
+ * LoBBS User Record
+ * Stores user authentication information for the LoBBS system
+ * UUID: username (for direct lookups)
+ */
+message LoBBSUser {
+  /*
+   * Username for the user account
+   */
+  string username = 1;
+
+  /*
+   * SHA256 hash of the user's password (32 bytes)
+   */
+  bytes password_hash = 2;
+
+  /*
+   * User UUID - deterministic hash derived from username
+   */
+  uint64 uuid = 3;
+}
+
+/*
+ * LoBBS Session Record
+ * Maps node IDs to logged-in user UUIDs
+ * UUID: node ID as uint64
+ */
+message LoBBSSession {
+  /*
+   * User UUID of the logged-in user
+   */
+  uint64 user_uuid = 1;
+
+  /*
+   * Last login timestamp
+   */
+  uint32 last_login_time = 2;
+
+  /*
+   * Node ID (stored for reference)
+   */
+  uint32 node_id = 3;
+}
+
+/*
+ * LoBBS Mail Record
+ * Stores mail messages between users
+ * UUID: auto-incrementing message ID
+ */
+message LoBBSMail {
+  /*
+   * Message UUID (auto-generated)
+   */
+  uint64 uuid = 1;
+
+  /*
+   * Sender's user UUID
+   */
+  uint64 from_user_uuid = 2;
+
+  /*
+   * Recipient's user UUID
+   */
+  uint64 to_user_uuid = 3;
+
+  /*
+   * Message content (max 200 bytes)
+   */
+  string message = 4;
+
+  /*
+   * Timestamp when message was sent
+   */
+  uint32 timestamp = 5;
+
+  /*
+   * Read status
+   */
+  bool read = 6;
+}
+
+/*
+ * LoBBS News Record
+ * Stores news/bulletin posts visible to all users
+ * UUID: auto-generated news ID
+ */
+message LoBBSNews {
+  /*
+   * News UUID (auto-generated)
+   */
+  uint64 uuid = 1;
+
+  /*
+   * Author's user UUID
+   */
+  uint64 author_user_uuid = 2;
+
+  /*
+   * News content (max 200 bytes)
+   */
+  string message = 3;
+
+  /*
+   * Timestamp when news was posted
+   */
+  uint32 timestamp = 4;
+}
+
+/*
+ * LoBBS News Read Tracking Record
+ * Tracks which users have read which news items
+ * UUID: deterministic key derived from news_uuid + user_uuid
+ */
+message LoBBSNewsRead {
+  /*
+   * News item UUID
+   */
+  uint64 news_uuid = 1;
+
+  /*
+   * User UUID who read the news
+   */
+  uint64 user_uuid = 2;
+
+  /*
+   * Timestamp when read
+   */
+  uint32 read_timestamp = 3;
+}
+
