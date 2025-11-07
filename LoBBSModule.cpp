@@ -659,9 +659,9 @@ ProcessMessage LoBBSModule::handleReceived(const meshtastic_MeshPacket &mp)
 
     std::string helpMsg = LOBBS_HEADER "/bye - Logout\n"
                                        "/users [filter] - List users (optional filter)\n"
-                                       "/mail [<n>|r <n>|l <n>|<n>-] - List/read mail\n"
+                                       "/mail [<n>|<n>-] - List/read mail\n"
                                        "@user <msg> - Send mail\n"
-                                       "/news [<n>|r <n>|l <n>|<n>-] - List/read news\n"
+                                       "/news [<n>|<n>-] - List/read news\n"
                                        "/news <msg> - Post news";
     LOG_DEBUG("Help message: %s", helpMsg.c_str());
     sendReply(mp.from, helpMsg);
