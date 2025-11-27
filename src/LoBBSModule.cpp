@@ -9,6 +9,7 @@
 #include <cctype>
 #include <cstring>
 #include <string>
+#include "ModuleRegistry.h"
 
 // Static helper: case-insensitive substring search
 static const char *stristr(const char *haystack, const char *needle)
@@ -689,3 +690,5 @@ void LoBBSModule::sendReply(NodeNum to, const std::string &msg)
     reply->decoded.want_response = false;
     service->sendToMesh(reply);
 }
+
+MESHTASTIC_REGISTER_MODULE(LoBBSModule);
