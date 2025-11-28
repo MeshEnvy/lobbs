@@ -2,12 +2,6 @@ syntax = "proto3";
 
 package meshtastic;
 
-option csharp_namespace = "Meshtastic.Protobufs";
-option go_package = "github.com/meshtastic/go/generated";
-option java_outer_classname = "LoBBSProtos";
-option java_package = "com.geeksville.mesh";
-option swift_prefix = "";
-
 /*
  * LoBBS User Record
  * Stores user authentication information for the LoBBS system
