@@ -16,19 +16,19 @@ LoBBS is a Meshtastic plugin that runs a complete bulletin board system entirely
 
 LoBBS is a Meshtastic plugin that is automatically discovered and integrated by the Meshtastic Plugin Manager (MPM). To install LoBBS:
 
-1. **Clone LoBBS into the plugins directory:**
+1. **Install the Meshtastic Plugin Manager:**
+
+```bash
+pip install mesh-plugin-manager
+```
+
+2. **Install LoBBS and its dependencies:**
+
+LoBBS requires LoDB as a dependency. MPM will automatically install it:
 
 ```bash
 cd /path/to/meshtastic/firmware
-git clone https://github.com/MeshEnvy/lobbs.git src/plugins/lobbs
-```
-
-2. **Install LoDB dependency:**
-
-LoBBS requires LoDB as a dependency. Install it as a plugin as well:
-
-```bash
-git clone https://github.com/MeshEnvy/lodb.git src/plugins/lodb
+mpm install lobbs
 ```
 
 3. **Build and flash:**
