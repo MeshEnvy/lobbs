@@ -1,11 +1,10 @@
 #pragma once
-#pragma MPM_MODULE(LoBBSModule)
 
+#include "meta.h"
 #include "LoBBSDal.h"
 #include "SinglePortModule.h"
 #include "lobbs.pb.h"
 
-#define LOBBS_VERSION "1.0.0"
 #define LOBBS_HEADER "LoBBS v" LOBBS_VERSION "\nCommands:\n"
 
 /**
