@@ -1,4 +1,5 @@
 #pragma once
+#pragma MPM_MODULE(LoBBSModule)
 
 #include "LoBBSDal.h"
 #include "SinglePortModule.h"
