@@ -1,11 +1,10 @@
 #pragma once
 
-#include "meta.h"
+#include "plugin.h"
 #include "LoBBSDal.h"
 #include "SinglePortModule.h"
 #include "lobbs.pb.h"
 
-#define LOBBS_HEADER "LoBBS v" LOBBS_VERSION "\nCommands:\n"
 
 /**
  * LoBBS (Lo-Fi Bulletin Board System) Module
