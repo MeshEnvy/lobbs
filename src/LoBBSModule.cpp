@@ -122,6 +122,11 @@ LoBBSModule::LoBBSModule() : SinglePortModule("LoBBS", meshtastic_PortNum_TEXT_M
 
 ProcessMessage LoBBSModule::handleReceived(const meshtastic_MeshPacket &mp)
 {
+    // Only process direct messages to this node, ignore broadcasts
+    if (!isToUs(&mp)) {
+        return ProcessMessage::CONTINUE;
+    }
+
     LOG_DEBUG("LoBBS received DM from=0x%0x, id=%d, msg=%.*s", mp.from, mp.id, mp.decoded.payload.size, mp.decoded.payload.bytes);
 
     meshtastic_LoBBSUser existingUser = meshtastic_LoBBSUser_init_zero;
