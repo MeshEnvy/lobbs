@@ -74,12 +74,10 @@ LoBBS replies inline with human-readable summaries. Unread content is flagged wi
 
 All user, mail, and news data is persisted via LoDB in the device filesystem. Clearing the filesystem, reflashing without preserving SPIFFS/LittleFS, or performing a full factory reset will delete the BBS contents. Regular backups of the filesystem are recommended for production deployments.
 
-## Troubleshooting
-
-- Verify your node clock is roughly correct. Timestamps in mail and news rely on the RTC and GPS time sources provided by the firmware.
-- Confirm that your node stays logged in (no `/bye` issued) if you expect to receive `@mentions`. Unauthenticated nodes receive only the login help banner.
-- If protobuf generation fails, ensure both LoBBS and LoDB plugins are properly installed in `src/plugins/` and that the Meshtastic Plugin Manager can discover them.
-
 ## License
 
-LoBBS is distributed under the MIT license. See the accompanying `LICENSE` file within this module for full text.
+LoBBS is distributed under the MIT license. See the accompanying `LICENSE` file within this module for full text. While LoBBS is MIT, it must be combined with Meshtastic source code which is GPL. You must therefore follow all GPL guidelines regarding the combined source and binary distributions of Meshtastic. The LoBBS source code may be distributed independently under MIT.
+
+## Disclaimer
+
+LoBBS and MeshForge are independent projects not endorsed by or affiliated with the Meshtastic organization.
