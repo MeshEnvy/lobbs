@@ -2,6 +2,8 @@
 
 **A Meshtastic firmware plugin providing a full bulletin board system**
 
+<iframe width="560" height="315" src="https://www.youtube.com/embed/FwtDY1QBXpQ?si=6KU5zWcl1mUhGg7-" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
 LoBBS is a Meshtastic plugin that runs a complete bulletin board system entirely inside the Meshtastic firmware. Once installed and built into your node, you can create user accounts, exchange private mail, broadcast news posts, and remotely administer the device without any sidecar services or host computer.
 
 ## Features
@@ -16,13 +18,13 @@ LoBBS is a Meshtastic plugin that runs a complete bulletin board system entirely
 
 ### Using Mesh Forge (easy)
 
-Use our [Mesh Forge build profile](https://meshforge.org/builds/new/835766d9e1b1c56c45d00d03f9ae96f376f2cf9e4d73c18a929b9849b9e88d42) to flash a LoBBS-enabled version of Meshtastic to your device.
+Use our [Mesh Forge build profile](https://meshforge.org/builds/new/?plugin=lobbs) to flash a LoBBS-enabled version of Meshtastic to your device.
 
 ### Build it yourself (experimental)
 
 > Warning: This requires 
 
-LoBBS is a [Meshtastic plugin](https://registry.meshforge.org) that is automatically discovered and integrated by the [Meshtastic Plugin Manager](https://pypi.org/project/mesh-plugin-manager/) (MPM). To install LoBBS:
+LoBBS is a [Meshtastic plugin](https://meshforge.org/plugins) that is automatically discovered and integrated by the [Meshtastic Plugin Manager](https://pypi.org/project/mesh-plugin-manager/) (MPM). To install LoBBS:
 
 1. **Install the Meshtastic Plugin Manager:**
 
