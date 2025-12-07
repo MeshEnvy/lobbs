@@ -2,7 +2,7 @@
 
 **A Meshtastic firmware plugin providing a full bulletin board system**
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/FwtDY1QBXpQ?si=6KU5zWcl1mUhGg7-" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+https://www.youtube.com/watch?v=FwtDY1QBXpQ
 
 LoBBS is a Meshtastic plugin that runs a complete bulletin board system entirely inside the Meshtastic firmware. Once installed and built into your node, you can create user accounts, exchange private mail, broadcast news posts, and remotely administer the device without any sidecar services or host computer.
 
