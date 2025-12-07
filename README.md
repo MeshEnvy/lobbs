@@ -1,4 +1,4 @@
-# LoBBS - Meshtastic BBS on the Firmware
+# LoBBS - Firmware-based BBS for Meshtastic
 
 **A Meshtastic firmware plugin providing a full bulletin board system**
 
