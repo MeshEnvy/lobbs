@@ -30,8 +30,6 @@ Use our [Mesh Forge build profile](https://meshforge.org/builds/new/?plugin=lobb
 
 ### Build it yourself (experimental)
 
-> Warning: This requires 
-
 LoBBS is a [Meshtastic plugin](https://meshforge.org/plugins) that is automatically discovered and integrated by the [Meshtastic Plugin Manager](https://pypi.org/project/mesh-plugin-manager/) (MPM). To install LoBBS:
 
 1. **Install the Meshtastic Plugin Manager:**
