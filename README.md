@@ -30,9 +30,9 @@ Use our [Mesh Forge build profile](https://meshforge.org/builds/new/?plugin=lobb
 
 ### Build it yourself (experimental)
 
-LoBBS is a [Meshtastic plugin](https://meshforge.org/plugins) that is automatically discovered and integrated by the [Meshtastic Plugin Manager](https://pypi.org/project/mesh-plugin-manager/) (MPM). To install LoBBS:
+LoBBS is a [Meshtastic plugin](https://meshforge.org/plugins) that is automatically discovered and integrated by the [Mesh Plugin Manager](https://pypi.org/project/mesh-plugin-manager/) (MPM). To install LoBBS:
 
-1. **Install the Meshtastic Plugin Manager:**
+1. **Install the Mesh Plugin Manager:**
 
 ```bash
 pip install mesh-plugin-manager
@@ -50,7 +50,7 @@ mpm install lobbs
 
 3. **Build and flash:**
 
-The Meshtastic Plugin Manager automatically discovers both plugins, generates protobuf files, and integrates them into the build. Simply build and flash as usual:
+The Mesh Plugin Manager automatically discovers both plugins, generates protobuf files, and integrates them into the build. Simply build and flash as usual:
 
 ```bash
 pio run -e esp32 -t upload
