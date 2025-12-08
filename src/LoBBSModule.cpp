@@ -54,9 +54,7 @@ static bool loadUserByUuid(LoBBSDal *dal, uint64_t uuid, meshtastic_LoBBSUser *o
         found = true;
     }
 
-    for (auto *userPtr : users) {
-        delete[] (uint8_t *)userPtr;
-    }
+    LoDb::freeRecords(users);
 
     return found;
 }
@@ -100,10 +98,7 @@ static void truncateMessage(const char *message, char *buffer, size_t bufferSize
 
 static void freeMailMessages(std::vector<void *> &mailMessages)
 {
-    for (auto *mailPtr : mailMessages) {
-        delete[] (uint8_t *)mailPtr;
-    }
-    mailMessages.clear();
+    LoDb::freeRecords(mailMessages);
 }
 
 static void freeNewsEntries(std::vector<LoBBSNewsEntry> &newsItems)
@@ -382,9 +377,7 @@ ProcessMessage LoBBSModule::handleReceived(const meshtastic_MeshPacket &mp)
             sendReply(mp.from, userListMsg.c_str());
 
             // Free allocated records
-            for (auto *userPtr : users) {
-                delete[] (uint8_t *)userPtr;
-            }
+            LoDb::freeRecords(users);
         }
 
         return ProcessMessage::CONTINUE;
