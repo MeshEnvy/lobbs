@@ -694,3 +694,5 @@ void LoBBSModule::sendReply(NodeNum to, const std::string &msg)
     reply->decoded.want_response = false;
     service->sendToMesh(reply);
 }
+
+LoBBSModule *lobbsPlugin;

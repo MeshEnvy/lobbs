@@ -5,5 +5,5 @@
 
 #include "LoBBSModule.h"
 
-#pragma MPM_MODULE(LoBBSModule)
+#pragma MPM_MODULE(LoBBSModule, lobbsPlugin)
 
