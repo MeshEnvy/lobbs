@@ -22,6 +22,11 @@ message LoBBSUser {
    * User UUID - deterministic hash derived from username
    */
   uint64 uuid = 3;
+
+  /*
+   * Whether this user is an administrator
+   */
+  bool is_admin = 4;
 }
 
 /*

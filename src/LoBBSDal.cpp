@@ -138,19 +138,23 @@ bool LoBBSDal::createUser(const char *username, const char *password, uint32_t n
     // Calculate UUID first (username with host node ID as salt)
     lodb_uuid_t userUuid = usernameToUuid(username, hostNodeId);
 
+    // Check if this is the first user (no existing users)
+    bool isFirstUser = (db->count("users") == 0);
+
     // Create user record
     meshtastic_LoBBSUser user = meshtastic_LoBBSUser_init_zero;
     strncpy(user.username, username, sizeof(user.username) - 1);
     user.uuid = userUuid;
     user.password_hash.size = 32;
     hashPassword(password, user.password_hash.bytes);
+    user.is_admin = isFirstUser;
     LoDbError err = db->insert("users", userUuid, &user);
     if (err != LODB_OK) {
         LOG_ERROR("Failed to create user: %s", username);
         return false;
     }
 
-    LOG_INFO("Created user: %s", username);
+    LOG_INFO("Created user: %s (admin: %s)", username, isFirstUser ? "yes" : "no");
 
     // Log in the user (create session)
     return loginUser(username, nodeId);
