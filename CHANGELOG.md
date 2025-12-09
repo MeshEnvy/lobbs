@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2025-12-09
+
 ### Patch
 - Updated module registration from `#pragma MPM_MODULE` to `MPM_REGISTER_MESHTASTIC_MODULE` comment directive
 - Renamed module variable from `lobbsPlugin` to `lobbsModule` for consistency
@@ -52,7 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session management
 - User directory and search functionality
 
-[Unreleased]: https://github.com/MeshEnvy/lobbs/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/MeshEnvy/lobbs/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/MeshEnvy/lobbs/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/MeshEnvy/lobbs/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/MeshEnvy/lobbs/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/MeshEnvy/lobbs/compare/v1.0.1...v1.1.0
