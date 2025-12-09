@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-12-09
+
 ### Minor
 - Logo assets with logo.pxd and logo.webp files
 - Admin user functionality - first registered user automatically becomes administrator
@@ -46,7 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session management
 - User directory and search functionality
 
-[Unreleased]: https://github.com/MeshEnvy/lobbs/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/MeshEnvy/lobbs/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/MeshEnvy/lobbs/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/MeshEnvy/lobbs/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/MeshEnvy/lobbs/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/MeshEnvy/lobbs/compare/v1.0.0...v1.0.1
