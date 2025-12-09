@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Patch
+- Updated module registration from `#pragma MPM_MODULE` to `MPM_REGISTER_MESHTASTIC_MODULE` comment directive
+- Renamed module variable from `lobbsPlugin` to `lobbsModule` for consistency
+
 ## [1.2.0] - 2025-12-09
 
 ### Minor

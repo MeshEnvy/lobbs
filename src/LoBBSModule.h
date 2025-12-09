@@ -37,4 +37,4 @@ class LoBBSModule : public SinglePortModule
     void sendReply(NodeNum to, const std::string &msg);
 };
 
-extern LoBBSModule *lobbsPlugin;
+extern LoBBSModule *lobbsModule;

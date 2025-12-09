@@ -688,4 +688,4 @@ void LoBBSModule::sendReply(NodeNum to, const std::string &msg)
     service->sendToMesh(reply);
 }
 
-LoBBSModule *lobbsPlugin;
+LoBBSModule *lobbsModule;
