@@ -124,6 +124,16 @@ class LoBBSDal
     bool markNewsAsRead(uint64_t newsUuid, uint64_t userUuid);
 
     /**
+     * Delete a news item. Only the author or an admin can delete.
+     */
+    int deleteNews(uint64_t newsUuid, const meshtastic_LoBBSUser *requestingUser);
+
+    /**
+     * Delete a mail message. Only the recipient or an admin can delete.
+     */
+    int deleteMail(uint64_t mailUuid, const meshtastic_LoBBSUser *requestingUser);
+
+    /**
      * Get the underlying database instance
      */
     LoDb *getDb() { return db; }

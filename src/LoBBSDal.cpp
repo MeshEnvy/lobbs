@@ -410,3 +410,78 @@ std::vector<LoBBSNewsEntry> LoBBSDal::getNewsForUser(uint64_t userUuid, uint32_t
               offset, limit);
     return result;
 }
+
+int LoBBSDal::deleteNews(uint64_t newsUuid, const meshtastic_LoBBSUser *requestingUser)
+{
+    // Load the news record to check authorization
+    meshtastic_LoBBSNews news = meshtastic_LoBBSNews_init_zero;
+    LoDbError err = db->get("news", newsUuid, &news);
+    if (err != LODB_OK) {
+        LOG_DEBUG("News not found: " LODB_UUID_FMT, LODB_UUID_ARGS(newsUuid));
+        return 1; // Not found
+    }
+
+    // Check authorization: must be author or admin
+    if (news.author_user_uuid != requestingUser->uuid && !requestingUser->is_admin) {
+        LOG_WARN("User " LODB_UUID_FMT " not authorized to delete news " LODB_UUID_FMT,
+                 LODB_UUID_ARGS(requestingUser->uuid), LODB_UUID_ARGS(newsUuid));
+        return 2; // Not authorized
+    }
+
+    // Delete associated news_reads entries
+    auto newsReads = db->select("news_reads",
+        [newsUuid](const void *rec) -> bool {
+            const meshtastic_LoBBSNewsRead *nr = (const meshtastic_LoBBSNewsRead *)rec;
+            return nr->news_uuid == newsUuid;
+        },
+        nullptr);
+
+    for (auto *readPtr : newsReads) {
+        const meshtastic_LoBBSNewsRead *nr = (const meshtastic_LoBBSNewsRead *)readPtr;
+        char key[35];
+        buildNewsReadKey(nr->news_uuid, nr->user_uuid, key, sizeof(key));
+        lodb_uuid_t readUuid = lodb_new_uuid(key, 0);
+        db->deleteRecord("news_reads", readUuid);
+    }
+    LoDb::freeRecords(newsReads);
+
+    // Delete the news record
+    err = db->deleteRecord("news", newsUuid);
+    if (err != LODB_OK) {
+        LOG_ERROR("Failed to delete news: " LODB_UUID_FMT, LODB_UUID_ARGS(newsUuid));
+        return 1;
+    }
+
+    LOG_INFO("Deleted news " LODB_UUID_FMT " by user " LODB_UUID_FMT, LODB_UUID_ARGS(newsUuid),
+             LODB_UUID_ARGS(requestingUser->uuid));
+    return 0; // Success
+}
+
+int LoBBSDal::deleteMail(uint64_t mailUuid, const meshtastic_LoBBSUser *requestingUser)
+{
+    // Load the mail record to check authorization
+    meshtastic_LoBBSMail mail = meshtastic_LoBBSMail_init_zero;
+    LoDbError err = db->get("mail", mailUuid, &mail);
+    if (err != LODB_OK) {
+        LOG_DEBUG("Mail not found: " LODB_UUID_FMT, LODB_UUID_ARGS(mailUuid));
+        return 1; // Not found
+    }
+
+    // Check authorization: must be recipient or admin
+    if (mail.to_user_uuid != requestingUser->uuid && !requestingUser->is_admin) {
+        LOG_WARN("User " LODB_UUID_FMT " not authorized to delete mail " LODB_UUID_FMT,
+                 LODB_UUID_ARGS(requestingUser->uuid), LODB_UUID_ARGS(mailUuid));
+        return 2; // Not authorized
+    }
+
+    // Delete the mail record
+    err = db->deleteRecord("mail", mailUuid);
+    if (err != LODB_OK) {
+        LOG_ERROR("Failed to delete mail: " LODB_UUID_FMT, LODB_UUID_ARGS(mailUuid));
+        return 1;
+    }
+
+    LOG_INFO("Deleted mail " LODB_UUID_FMT " by user " LODB_UUID_FMT, LODB_UUID_ARGS(mailUuid),
+             LODB_UUID_ARGS(requestingUser->uuid));
+    return 0; // Success
+}

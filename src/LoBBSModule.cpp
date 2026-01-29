@@ -505,6 +505,88 @@ ProcessMessage LoBBSModule::handleReceived(const meshtastic_MeshPacket &mp)
         return ProcessMessage::CONTINUE;
     }
 
+    if (strcasecmp(cmdName, "/delmail") == 0) {
+        LOG_INFO("Processing /delmail command from node=0x%0x", mp.from);
+
+        char *arg1 = strtok(NULL, " ");
+        if (!arg1 || !isdigit((unsigned char)*arg1)) {
+            sendReply(mp.from, "Usage: /delmail <n>");
+            return ProcessMessage::CONTINUE;
+        }
+
+        int mailNum = atoi(arg1);
+        if (mailNum < 1) {
+            sendReply(mp.from, "Invalid mail number");
+            return ProcessMessage::CONTINUE;
+        }
+
+        // Get mail list to map number to UUID (same ordering as /mail command)
+        auto mailMessages = dal->getMailForUser(existingUser.uuid, 0, (uint32_t)mailNum);
+
+        if (mailNum > (int)mailMessages.size()) {
+            sendReply(mp.from, "Invalid mail number");
+            freeMailMessages(mailMessages);
+            return ProcessMessage::CONTINUE;
+        }
+
+        const meshtastic_LoBBSMail *mail = (const meshtastic_LoBBSMail *)mailMessages[mailNum - 1];
+        uint64_t mailUuid = mail->uuid;
+
+        int result = dal->deleteMail(mailUuid, &existingUser);
+        freeMailMessages(mailMessages);
+
+        if (result == 0) {
+            sendReply(mp.from, "Mail deleted");
+        } else if (result == 2) {
+            sendReply(mp.from, "Not authorized to delete this mail");
+        } else {
+            sendReply(mp.from, "Mail not found");
+        }
+
+        return ProcessMessage::CONTINUE;
+    }
+
+    if (strcasecmp(cmdName, "/delnews") == 0) {
+        LOG_INFO("Processing /delnews command from node=0x%0x", mp.from);
+
+        char *arg1 = strtok(NULL, " ");
+        if (!arg1 || !isdigit((unsigned char)*arg1)) {
+            sendReply(mp.from, "Usage: /delnews <n>");
+            return ProcessMessage::CONTINUE;
+        }
+
+        int newsNum = atoi(arg1);
+        if (newsNum < 1) {
+            sendReply(mp.from, "Invalid news number");
+            return ProcessMessage::CONTINUE;
+        }
+
+        // Get news list to map number to UUID (same ordering as /news command)
+        auto newsItems = dal->getNewsForUser(existingUser.uuid, 0, (uint32_t)newsNum);
+
+        if (newsNum > (int)newsItems.size()) {
+            sendReply(mp.from, "Invalid news number");
+            freeNewsEntries(newsItems);
+            return ProcessMessage::CONTINUE;
+        }
+
+        const meshtastic_LoBBSNews *news = newsItems[newsNum - 1].news;
+        uint64_t newsUuid = news->uuid;
+
+        int result = dal->deleteNews(newsUuid, &existingUser);
+        freeNewsEntries(newsItems);
+
+        if (result == 0) {
+            sendReply(mp.from, "News deleted");
+        } else if (result == 2) {
+            sendReply(mp.from, "Not authorized to delete this news");
+        } else {
+            sendReply(mp.from, "News not found");
+        }
+
+        return ProcessMessage::CONTINUE;
+    }
+
     if (strcasecmp(cmdName, "/news") == 0) {
         LOG_INFO("Processing /news command from node=0x%0x", mp.from);
 
@@ -658,9 +740,11 @@ ProcessMessage LoBBSModule::handleReceived(const meshtastic_MeshPacket &mp)
     std::string helpMsg = LOBBS_HEADER "/bye - Logout\n"
                                        "/users [filter] - List users (optional filter)\n"
                                        "/mail [<n>|<n>-] - List/read mail\n"
+                                       "/delmail <n> - Delete mail\n"
                                        "@user <msg> - Send mail\n"
                                        "/news [<n>|<n>-] - List/read news\n"
-                                       "/news <msg> - Post news";
+                                       "/news <msg> - Post news\n"
+                                       "/delnews <n> - Delete news";
     LOG_DEBUG("Help message: %s", helpMsg.c_str());
     sendReply(mp.from, helpMsg);
     return ProcessMessage::CONTINUE;
