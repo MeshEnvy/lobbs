@@ -666,26 +666,113 @@ ProcessMessage LoBBSModule::handleReceived(const meshtastic_MeshPacket &mp)
     return ProcessMessage::CONTINUE;
 }
 
+std::vector<std::string> LoBBSModule::splitMessage(const std::string &msg, size_t maxChunkSize)
+{
+    std::vector<std::string> chunks;
+
+    if (msg.empty()) {
+        return chunks;
+    }
+
+    // If message fits in one chunk, no splitting needed
+    if (msg.size() <= maxChunkSize) {
+        chunks.push_back(msg);
+        return chunks;
+    }
+
+    // Calculate number of parts needed
+    // Reserve space for part indicator: "[nn/nn] " = 8 chars max for 2-digit counts
+    static constexpr size_t PART_INDICATOR_MAX = 10; // "[999/999] " with safety margin
+    size_t effectiveChunkSize = maxChunkSize - PART_INDICATOR_MAX;
+
+    // First pass: estimate number of parts
+    size_t estimatedParts = (msg.size() + effectiveChunkSize - 1) / effectiveChunkSize;
+    if (estimatedParts > 99) {
+        estimatedParts = 99; // Cap at 99 parts
+    }
+
+    size_t pos = 0;
+    size_t partNum = 1;
+
+    while (pos < msg.size() && partNum <= 99) {
+        size_t remaining = msg.size() - pos;
+        size_t chunkLen = std::min(remaining, effectiveChunkSize);
+
+        // Try to split at word boundary if not the last chunk
+        if (pos + chunkLen < msg.size() && chunkLen > 20) {
+            // Look backwards for a space to split on
+            size_t splitPos = chunkLen;
+            size_t minSplit = chunkLen > 40 ? chunkLen - 40 : chunkLen / 2;
+
+            while (splitPos > minSplit && msg[pos + splitPos] != ' ' && msg[pos + splitPos] != '\n') {
+                splitPos--;
+            }
+
+            // Only use word boundary if we found one
+            if (splitPos > minSplit) {
+                chunkLen = splitPos;
+            }
+        }
+
+        chunks.push_back(msg.substr(pos, chunkLen));
+        pos += chunkLen;
+
+        // Skip leading whitespace on next chunk
+        while (pos < msg.size() && msg[pos] == ' ') {
+            pos++;
+        }
+
+        partNum++;
+    }
+
+    return chunks;
+}
+
 void LoBBSModule::sendReply(NodeNum to, const std::string &msg)
 {
-    meshtastic_MeshPacket *reply = allocDataPacket();
-    static constexpr char truncMarker[] = "[...]";
-    static constexpr size_t truncMarkerLen = sizeof(truncMarker) - 1;
+    // Split message into chunks
+    auto chunks = splitMessage(msg, MAX_REPLY_BYTES);
 
-    bool isTruncated = msg.size() > MAX_REPLY_BYTES;
-    size_t payloadSize = isTruncated ? MAX_REPLY_BYTES : msg.size();
-    reply->decoded.payload.size = payloadSize;
-
-    if (isTruncated) {
-        size_t copyLen = MAX_REPLY_BYTES > truncMarkerLen ? MAX_REPLY_BYTES - truncMarkerLen : 0;
-        memcpy(reply->decoded.payload.bytes, msg.c_str(), copyLen);
-        memcpy(reply->decoded.payload.bytes + copyLen, truncMarker, truncMarkerLen);
-    } else {
-        memcpy(reply->decoded.payload.bytes, msg.c_str(), payloadSize);
+    if (chunks.empty()) {
+        return;
     }
-    reply->to = to;
-    reply->decoded.want_response = false;
-    service->sendToMesh(reply);
+
+    int totalParts = static_cast<int>(chunks.size());
+
+    // Send chunks in REVERSE order - mesh tends to deliver in LIFO order
+    // so sending last chunk first results in correct display order
+    for (int i = totalParts - 1; i >= 0; i--) {
+        meshtastic_MeshPacket *reply = allocDataPacket();
+
+        std::string payload;
+        if (totalParts > 1) {
+            // Add part indicator for multi-part messages
+            char partIndicator[16];
+            snprintf(partIndicator, sizeof(partIndicator), "[%d/%d] ", i + 1, totalParts);
+            payload = partIndicator;
+            payload += chunks[i];
+        } else {
+            payload = chunks[i];
+        }
+
+        // Ensure we don't exceed max size (safety check)
+        if (payload.size() > MAX_REPLY_BYTES) {
+            payload = payload.substr(0, MAX_REPLY_BYTES);
+        }
+
+        reply->decoded.payload.size = payload.size();
+        memcpy(reply->decoded.payload.bytes, payload.c_str(), payload.size());
+        reply->to = to;
+        reply->decoded.want_response = false;
+        service->sendToMesh(reply);
+
+        // Delay between multi-part messages to avoid overwhelming the mesh
+        // and give receiving clients time to process
+        // Use randomized delay to reduce collision probability
+        if (i > 0) {
+            delay(100 + (random(10, 101))); // 100ms + random 10-100ms
+        }
+    }
 }
 
 LoBBSModule *lobbsModule;
