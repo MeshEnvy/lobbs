@@ -509,8 +509,25 @@ ProcessMessage LoBBSModule::handleReceived(const meshtastic_MeshPacket &mp)
         LOG_INFO("Processing /delmail command from node=0x%0x", mp.from);
 
         char *arg1 = strtok(NULL, " ");
-        if (!arg1 || !isdigit((unsigned char)*arg1)) {
-            sendReply(mp.from, "Usage: /delmail <n>");
+        if (!arg1) {
+            sendReply(mp.from, "Usage: /delmail <n> or /delmail all");
+            return ProcessMessage::CONTINUE;
+        }
+
+        // Check for "all" argument
+        if (strcasecmp(arg1, "all") == 0) {
+            int deletedCount = dal->deleteAllMailForUser(existingUser.uuid, &existingUser);
+            if (deletedCount < 0) {
+                sendReply(mp.from, "Not authorized");
+                return ProcessMessage::CONTINUE;
+            }
+            snprintf(replyBuffer, sizeof(replyBuffer), "Deleted %d mail message%s", deletedCount, deletedCount == 1 ? "" : "s");
+            sendReply(mp.from, replyBuffer);
+            return ProcessMessage::CONTINUE;
+        }
+
+        if (!isdigit((unsigned char)*arg1)) {
+            sendReply(mp.from, "Usage: /delmail <n> or /delmail all");
             return ProcessMessage::CONTINUE;
         }
 
@@ -550,7 +567,24 @@ ProcessMessage LoBBSModule::handleReceived(const meshtastic_MeshPacket &mp)
         LOG_INFO("Processing /delnews command from node=0x%0x", mp.from);
 
         char *arg1 = strtok(NULL, " ");
-        if (!arg1 || !isdigit((unsigned char)*arg1)) {
+        if (!arg1) {
+            sendReply(mp.from, "Usage: /delnews <n>");
+            return ProcessMessage::CONTINUE;
+        }
+
+        // Check for "all" argument (admin only)
+        if (strcasecmp(arg1, "all") == 0) {
+            if (!existingUser.is_admin) {
+                sendReply(mp.from, "Not authorized. Admin only.");
+                return ProcessMessage::CONTINUE;
+            }
+            int deletedCount = dal->deleteAllNews();
+            snprintf(replyBuffer, sizeof(replyBuffer), "Deleted %d news item%s", deletedCount, deletedCount == 1 ? "" : "s");
+            sendReply(mp.from, replyBuffer);
+            return ProcessMessage::CONTINUE;
+        }
+
+        if (!isdigit((unsigned char)*arg1)) {
             sendReply(mp.from, "Usage: /delnews <n>");
             return ProcessMessage::CONTINUE;
         }
@@ -740,7 +774,7 @@ ProcessMessage LoBBSModule::handleReceived(const meshtastic_MeshPacket &mp)
     std::string helpMsg = LOBBS_HEADER "/bye - Logout\n"
                                        "/users [filter] - List users (optional filter)\n"
                                        "/mail [<n>|<n>-] - List/read mail\n"
-                                       "/delmail <n> - Delete mail\n"
+                                       "/delmail <n>|all - Delete mail\n"
                                        "@user <msg> - Send mail\n"
                                        "/news [<n>|<n>-] - List/read news\n"
                                        "/news <msg> - Post news\n"

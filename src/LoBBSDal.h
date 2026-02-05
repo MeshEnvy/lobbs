@@ -134,6 +134,18 @@ class LoBBSDal
     int deleteMail(uint64_t mailUuid, const meshtastic_LoBBSUser *requestingUser);
 
     /**
+     * Delete all news items. Admin only.
+     * @return Number of news items deleted
+     */
+    int deleteAllNews();
+
+    /**
+     * Delete all mail for a specific user.
+     * @return Number of mail messages deleted, or -1 on error
+     */
+    int deleteAllMailForUser(uint64_t mailboxUserUuid, const meshtastic_LoBBSUser *requestingUser);
+
+    /**
      * Get the underlying database instance
      */
     LoDb *getDb() { return db; }
