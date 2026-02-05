@@ -668,61 +668,91 @@ ProcessMessage LoBBSModule::handleReceived(const meshtastic_MeshPacket &mp)
 
 std::vector<std::string> LoBBSModule::splitMessage(const std::string &msg, size_t maxChunkSize)
 {
+    // We first attempt to split on newline boundaries, falling back to space boundaries
+    // and finally just going for a hard cut.
     std::vector<std::string> chunks;
 
     if (msg.empty()) {
         return chunks;
     }
 
-    // If message fits in one chunk, no splitting needed
     if (msg.size() <= maxChunkSize) {
         chunks.push_back(msg);
         return chunks;
     }
 
-    // Calculate number of parts needed
-    // Reserve space for part indicator: "[nn/nn] " = 8 chars max for 2-digit counts
-    static constexpr size_t PART_INDICATOR_MAX = 10; // "[999/999] " with safety margin
+    static constexpr size_t PART_INDICATOR_MAX = 10;
     size_t effectiveChunkSize = maxChunkSize - PART_INDICATOR_MAX;
 
-    // First pass: estimate number of parts
-    size_t estimatedParts = (msg.size() + effectiveChunkSize - 1) / effectiveChunkSize;
-    if (estimatedParts > 99) {
-        estimatedParts = 99; // Cap at 99 parts
-    }
+    bool hasNewlines = (msg.find('\n') != std::string::npos);
 
     size_t pos = 0;
-    size_t partNum = 1;
 
-    while (pos < msg.size() && partNum <= 99) {
+    while (pos < msg.size() && chunks.size() < 99) {
         size_t remaining = msg.size() - pos;
-        size_t chunkLen = std::min(remaining, effectiveChunkSize);
 
-        // Try to split at word boundary if not the last chunk
-        if (pos + chunkLen < msg.size() && chunkLen > 20) {
-            // Look backwards for a space to split on
-            size_t splitPos = chunkLen;
-            size_t minSplit = chunkLen > 40 ? chunkLen - 40 : chunkLen / 2;
+	// A big thing or a small / The winner takes it all
+        if (remaining <= effectiveChunkSize) {
+            chunks.push_back(msg.substr(pos));
+            break;
+        }
 
-            while (splitPos > minSplit && msg[pos + splitPos] != ' ' && msg[pos + splitPos] != '\n') {
-                splitPos--;
+        size_t chunkLen = effectiveChunkSize;
+        bool foundDelimiter = false;
+
+        if (hasNewlines) {
+           // Newline-based splitting strategy:
+            // 1. Find the last newline BEFORE the chunk boundary
+            // 2. If not found, look for the NEXT newline after boundary (to keep line intact)
+            // 3. If next newline makes chunk too big, fall back to space splitting
+
+            size_t searchEnd = pos + effectiveChunkSize;
+
+            for (size_t i = searchEnd; i > pos; --i) {
+                if (i < msg.size() && msg[i] == '\n') {
+                    chunkLen = i - pos + 1;
+                    foundDelimiter = true;
+                    break;
+                }
             }
 
-            // Only use word boundary if we found one
-            if (splitPos > minSplit) {
-                chunkLen = splitPos;
+            if (!foundDelimiter) {
+                size_t nextNewline = msg.find('\n', searchEnd);
+                if (nextNewline != std::string::npos && (nextNewline - pos + 1) <= effectiveChunkSize * 2) {
+                    chunkLen = nextNewline - pos + 1;
+                    foundDelimiter = true;
+                } else {
+                    size_t minSearch = (effectiveChunkSize > 40) ? (searchEnd - 40) : pos;
+                    for (size_t i = searchEnd; i > minSearch; --i) {
+                        if (i < msg.size() && msg[i] == ' ') {
+                            chunkLen = i - pos;
+                            foundDelimiter = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        } else {
+            size_t searchEnd = pos + effectiveChunkSize;
+            size_t minSearch = (effectiveChunkSize > 40) ? (searchEnd - 40) : pos;
+
+            for (size_t i = searchEnd; i > minSearch; --i) {
+                if (i < msg.size() && msg[i] == ' ') {
+                    chunkLen = i - pos;
+                    foundDelimiter = true;
+                    break;
+                }
             }
         }
 
         chunks.push_back(msg.substr(pos, chunkLen));
         pos += chunkLen;
 
-        // Skip leading whitespace on next chunk
-        while (pos < msg.size() && msg[pos] == ' ') {
-            pos++;
+        if (pos < msg.size() && !hasNewlines) {
+            while (pos < msg.size() && msg[pos] == ' ') {
+                pos++;
+            }
         }
-
-        partNum++;
     }
 
     return chunks;
