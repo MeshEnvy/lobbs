@@ -142,7 +142,8 @@ ProcessMessage LoBBSModule::handleReceived(const meshtastic_MeshPacket &mp)
 
     // Check for @mention mail sending BEFORE tokenizing (authenticated users only)
     // This must happen before strtok destroys the buffer
-    if (isAuthenticated && strchr(msgBuffer, '@')) {
+    // Skip @mention processing if this is a command (starts with '/')
+    if (isAuthenticated && msgBuffer[0] != '/' && strchr(msgBuffer, '@')) {
         LOG_DEBUG("Processing @mention mail from node=0x%0x", mp.from);
 
         // Extract message content and find all @mentions
