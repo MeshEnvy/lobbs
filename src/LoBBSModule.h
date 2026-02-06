@@ -4,6 +4,8 @@
 #include "LoBBSDal.h"
 #include "SinglePortModule.h"
 #include "lobbs.pb.h"
+#include <string>
+#include <vector>
 
 
 /**
@@ -35,6 +37,9 @@ class LoBBSModule : public SinglePortModule
     LoBBSDal *dal;
 
     void sendReply(NodeNum to, const std::string &msg);
+
+    // Helper: split message into chunks for multi-part sending
+    std::vector<std::string> splitMessage(const std::string &msg, size_t maxChunkSize);
 };
 
 extern LoBBSModule *lobbsModule;

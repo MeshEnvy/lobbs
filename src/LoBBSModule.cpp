@@ -784,26 +784,143 @@ ProcessMessage LoBBSModule::handleReceived(const meshtastic_MeshPacket &mp)
     return ProcessMessage::CONTINUE;
 }
 
+std::vector<std::string> LoBBSModule::splitMessage(const std::string &msg, size_t maxChunkSize)
+{
+    // We first attempt to split on newline boundaries, falling back to space boundaries
+    // and finally just going for a hard cut.
+    std::vector<std::string> chunks;
+
+    if (msg.empty()) {
+        return chunks;
+    }
+
+    if (msg.size() <= maxChunkSize) {
+        chunks.push_back(msg);
+        return chunks;
+    }
+
+    static constexpr size_t PART_INDICATOR_MAX = 10;
+    size_t effectiveChunkSize = maxChunkSize - PART_INDICATOR_MAX;
+
+    bool hasNewlines = (msg.find('\n') != std::string::npos);
+
+    size_t pos = 0;
+
+    while (pos < msg.size() && chunks.size() < 99) {
+        size_t remaining = msg.size() - pos;
+
+	// A big thing or a small / The winner takes it all
+        if (remaining <= effectiveChunkSize) {
+            chunks.push_back(msg.substr(pos));
+            break;
+        }
+
+        size_t chunkLen = effectiveChunkSize;
+        bool foundDelimiter = false;
+
+        if (hasNewlines) {
+           // Newline-based splitting strategy:
+            // 1. Find the last newline BEFORE the chunk boundary
+            // 2. If not found, look for the NEXT newline after boundary (to keep line intact)
+            // 3. If next newline makes chunk too big, fall back to space splitting
+
+            size_t searchEnd = pos + effectiveChunkSize;
+
+            for (size_t i = searchEnd; i > pos; --i) {
+                if (i < msg.size() && msg[i] == '\n') {
+                    chunkLen = i - pos + 1;
+                    foundDelimiter = true;
+                    break;
+                }
+            }
+
+            if (!foundDelimiter) {
+                size_t nextNewline = msg.find('\n', searchEnd);
+                if (nextNewline != std::string::npos && (nextNewline - pos + 1) <= effectiveChunkSize * 2) {
+                    chunkLen = nextNewline - pos + 1;
+                    foundDelimiter = true;
+                } else {
+                    size_t minSearch = (effectiveChunkSize > 40) ? (searchEnd - 40) : pos;
+                    for (size_t i = searchEnd; i > minSearch; --i) {
+                        if (i < msg.size() && msg[i] == ' ') {
+                            chunkLen = i - pos;
+                            foundDelimiter = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        } else {
+            size_t searchEnd = pos + effectiveChunkSize;
+            size_t minSearch = (effectiveChunkSize > 40) ? (searchEnd - 40) : pos;
+
+            for (size_t i = searchEnd; i > minSearch; --i) {
+                if (i < msg.size() && msg[i] == ' ') {
+                    chunkLen = i - pos;
+                    foundDelimiter = true;
+                    break;
+                }
+            }
+        }
+
+        chunks.push_back(msg.substr(pos, chunkLen));
+        pos += chunkLen;
+
+        if (pos < msg.size() && !hasNewlines) {
+            while (pos < msg.size() && msg[pos] == ' ') {
+                pos++;
+            }
+        }
+    }
+
+    return chunks;
+}
+
 void LoBBSModule::sendReply(NodeNum to, const std::string &msg)
 {
-    meshtastic_MeshPacket *reply = allocDataPacket();
-    static constexpr char truncMarker[] = "[...]";
-    static constexpr size_t truncMarkerLen = sizeof(truncMarker) - 1;
+    // Split message into chunks
+    auto chunks = splitMessage(msg, MAX_REPLY_BYTES);
 
-    bool isTruncated = msg.size() > MAX_REPLY_BYTES;
-    size_t payloadSize = isTruncated ? MAX_REPLY_BYTES : msg.size();
-    reply->decoded.payload.size = payloadSize;
-
-    if (isTruncated) {
-        size_t copyLen = MAX_REPLY_BYTES > truncMarkerLen ? MAX_REPLY_BYTES - truncMarkerLen : 0;
-        memcpy(reply->decoded.payload.bytes, msg.c_str(), copyLen);
-        memcpy(reply->decoded.payload.bytes + copyLen, truncMarker, truncMarkerLen);
-    } else {
-        memcpy(reply->decoded.payload.bytes, msg.c_str(), payloadSize);
+    if (chunks.empty()) {
+        return;
     }
-    reply->to = to;
-    reply->decoded.want_response = false;
-    service->sendToMesh(reply);
+
+    int totalParts = static_cast<int>(chunks.size());
+
+    // Send chunks in REVERSE order - mesh tends to deliver in LIFO order
+    // so sending last chunk first results in correct display order
+    for (int i = totalParts - 1; i >= 0; i--) {
+        meshtastic_MeshPacket *reply = allocDataPacket();
+
+        std::string payload;
+        if (totalParts > 1) {
+            // Add part indicator for multi-part messages
+            char partIndicator[16];
+            snprintf(partIndicator, sizeof(partIndicator), "[%d/%d] ", i + 1, totalParts);
+            payload = partIndicator;
+            payload += chunks[i];
+        } else {
+            payload = chunks[i];
+        }
+
+        // Ensure we don't exceed max size (safety check)
+        if (payload.size() > MAX_REPLY_BYTES) {
+            payload = payload.substr(0, MAX_REPLY_BYTES);
+        }
+
+        reply->decoded.payload.size = payload.size();
+        memcpy(reply->decoded.payload.bytes, payload.c_str(), payload.size());
+        reply->to = to;
+        reply->decoded.want_response = false;
+        service->sendToMesh(reply);
+
+        // Delay between multi-part messages to avoid overwhelming the mesh
+        // and give receiving clients time to process
+        // Use randomized delay to reduce collision probability
+        if (i > 0) {
+            delay(100 + (random(10, 101))); // 100ms + random 10-100ms
+        }
+    }
 }
 
 LoBBSModule *lobbsModule;
