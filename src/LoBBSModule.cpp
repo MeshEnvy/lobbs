@@ -769,9 +769,8 @@ void LoBBSModule::sendReply(NodeNum to, const std::string &msg)
 
     int totalParts = static_cast<int>(chunks.size());
 
-    // Send chunks in REVERSE order - mesh tends to deliver in LIFO order
-    // so sending last chunk first results in correct display order
-    for (int i = totalParts - 1; i >= 0; i--) {
+    // Send chunks in order
+    for (int i = 0; i < totalParts; i++) {
         meshtastic_MeshPacket *reply = allocDataPacket();
 
         std::string payload;
@@ -799,7 +798,7 @@ void LoBBSModule::sendReply(NodeNum to, const std::string &msg)
         // Delay between multi-part messages to avoid overwhelming the mesh
         // and give receiving clients time to process
         // Use randomized delay to reduce collision probability
-        if (i > 0) {
+        if (i < totalParts - 1) {
             delay(100 + (random(10, 101))); // 100ms + random 10-100ms
         }
     }
