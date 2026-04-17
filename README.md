@@ -24,9 +24,9 @@ LoBBS is a Meshtastic plugin that runs a complete bulletin board system entirely
 
 ## Installation
 
-### Using Mesh Forge (easy)
+### Using MeshForge (easy)
 
-Use our [Mesh Forge build profile](https://meshforge.org/builds/new/?plugin=lobbs) to flash a LoBBS-enabled version of Meshtastic to your device.
+Use our [MeshForge build profile](https://meshforge.org/builds/new/?plugin=lobbs) to flash a LoBBS-enabled version of Meshtastic to your device.
 
 ### Build it yourself (experimental)
 
