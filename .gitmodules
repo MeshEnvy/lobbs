@@ -1,0 +1,9 @@
+[submodule "meshtastic"]
+	path = meshtastic
+	url = git@github.com:MeshEnvy/lobbs-meshtstic-firmware.git
+[submodule "lo-star"]
+	path = lo-star
+	url = git@github.com:MeshEnvy/lo-star.git
+[submodule "lotato"]
+	path = lotato
+	url = git@github.com:MeshEnvy/lotato.git
