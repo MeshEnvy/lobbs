@@ -1,6 +1,6 @@
 [submodule "meshtastic"]
 	path = meshtastic
-	url = git@github.com:MeshEnvy/lobbs-meshtstic-firmware.git
+	url = git@github.com:MeshEnvy/lobbs-meshtastic-firmware.git
 [submodule "lo-star"]
 	path = lo-star
 	url = git@github.com:MeshEnvy/lo-star.git

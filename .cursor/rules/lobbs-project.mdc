@@ -1,0 +1,35 @@
+---
+description: LoBBS project context — greenfield on-firmware BBS for Meshtastic + MeshCore, lo-star conventions
+alwaysApply: true
+---
+
+# LoBBS
+
+Cross-platform, on-firmware BBS for **Meshtastic** and **MeshCore**. Greenfield: no backward compatibility, no legacy code paths — delete rather than dual-path, simplify rather than preserve old APIs.
+
+## Architecture (see [lo-star/README.md](lo-star/README.md))
+
+Three layers — **thin fork, fat library**:
+
+1. **lo-star** — shared portable helpers (settings, protobuf, logging, messaging, FS).
+2. **Product library** — portable LoBBS code lives in [`lobbs/`](lobbs/) (PlatformIO library, mirrors `lotato/lotato/` upstream). Business logic and protocol mapping belong here.
+3. **Firmware forks** ([`meshtastic/`](meshtastic/) submodule, MeshCore fork) — HAL, build glue, registration, and **thin delegates** into `lobbs::meshcore::…` / `lobbs::meshtastic::…`.
+
+Example reference: [`lotato/lotato/platforms/meshcore/MeshcoreCliGateway.h`](lotato/lotato/platforms/meshcore/MeshcoreCliGateway.h) shows the `namespace Lotato { init(); delegate(); }` façade + inner `lotato::meshcore::Delegate` pattern to mirror.
+
+## Where code goes
+
+- Root [`src/`](src/) is Meshtastic-module glue (`LoBBSModule.*`, `LoBBSDal.*`, `lobbs.proto`) — keep it minimal fork-side.
+- New portable behavior goes in [`lobbs/`](lobbs/); platform delegates go under `lobbs/platforms/<platform>/`.
+- Submodules: see [`.gitmodules`](.gitmodules) (`lo-star`, `lotato`, `meshtastic`). Do not edit submodule contents from this repo.
+
+## Setup / build
+
+Follow [`lo-star/README.md`](lo-star/README.md) for submodule setup, `git submodule update --init --recursive`, PlatformIO `symlink://../lo-star` dependency, upstream-tag branching, release tag naming (`<product>-<ver>-<base>-<ver>`), and MeshForge distribution. Do not restate that content elsewhere.
+
+## Style
+
+- Bad: keep `#ifdef LEGACY_…` branches "just in case".
+  Good: delete the old path.
+- Bad: grow protocol logic inside a firmware-fork class.
+  Good: call one line into `lobbs::<platform>::Delegate` and implement there.
