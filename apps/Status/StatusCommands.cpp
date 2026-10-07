@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "StatusCommands.h"
 #include "../../LoBBSCommandRegistry.h"
 #include "../../LoBBSHooks.h"
@@ -37,4 +35,3 @@ void lobbsStatusRegisterCommands()
     lobbsAddFilter("help_topics", filterStatusHelpTopics, LOBBS_HOOK_PRIORITY_STATUS);
 }
 
-#endif

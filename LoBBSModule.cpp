@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSModule.h"
 #include "LoBBSConfig.h"
 #include "LoBBSDispatch.h"
@@ -114,4 +112,3 @@ void LoBBSModule::sendReply(const meshtastic_MeshPacket &req, const char *msg)
     lobbsBreadcrumb("reply out");
 }
 
-#endif

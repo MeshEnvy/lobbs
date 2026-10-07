@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSResponse.h"
 #include <stdint.h>
 
@@ -21,4 +19,3 @@ void lobbsReplyCacheErase(uint32_t sessionNodeId);
 bool lobbsReplyCacheStore(uint32_t sessionNodeId, const LoBBSResponse &resp);
 bool lobbsReplyCacheLoad(uint32_t sessionNodeId, LoBBSResponse &out);
 
-#endif

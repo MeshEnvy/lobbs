@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "ConfigDal.h"
 #include "../../LoBBSCommandCtx.h"
 #include "../../LoBBSHooks.h"
@@ -155,4 +153,3 @@ void ConfigDal::notifyDatabaseOpened(LoBBSModule &mod)
     }
 }
 
-#endif

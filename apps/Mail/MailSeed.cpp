@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "../../LoBBSConfig.h"
 #if LOBBS_SEED
 
@@ -35,5 +33,4 @@ void lobbsSeedMail(LoBBSModule &mod)
         mail.markMailAsRead(MailDal::mailUuid(inbox[j]));
 }
 
-#endif
 #endif

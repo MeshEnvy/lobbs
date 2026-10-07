@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "../../LoBBSConfig.h"
 #if LOBBS_SEED
 
@@ -24,5 +22,4 @@ void lobbsSeedYarn(LoBBSModule &mod)
                      LOBBS_YARN_DEFAULT_MAX_CHARS);
 }
 
-#endif
 #endif

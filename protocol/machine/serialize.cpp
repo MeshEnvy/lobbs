@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "serialize.h"
 #include <cstddef>
 
@@ -23,4 +21,3 @@ bool lobbsSerializeMachine(const LoBBSResponse &resp, std::string &out)
     return true;
 }
 
-#endif

@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "../../LoBBSConfig.h"
 #if LOBBS_SEED
 
@@ -26,5 +24,4 @@ void lobbsSeedNews(LoBBSModule &mod)
     }
 }
 
-#endif
 #endif

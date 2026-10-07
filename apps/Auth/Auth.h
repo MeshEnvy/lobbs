@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "AuthDal.h"
 
 class AuthApp
@@ -13,4 +11,3 @@ class AuthApp
     AuthDal dal_;
 };
 
-#endif

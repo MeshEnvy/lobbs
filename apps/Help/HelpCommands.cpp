@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "HelpCommands.h"
 #include "../../LoBBSCommandRegistry.h"
 #include "../../LoBBSConfig.h"
@@ -121,4 +119,3 @@ void lobbsHelpRegisterCommands()
     lobbsAddFilter("help_for_topic", filterHelpForTopic, LOBBS_HOOK_PRIORITY_HELP);
 }
 
-#endif

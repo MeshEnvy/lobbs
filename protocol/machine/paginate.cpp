@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "paginate.h"
 #include "LoBBSReply.h"
 #include <cstdio>
@@ -49,4 +47,3 @@ bool lobbsPaginateMachine(uint32_t reqId, const std::string &document, uint32_t 
     return true;
 }
 
-#endif

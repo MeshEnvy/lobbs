@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "ConfigCommon.h"
 #include "../../LoBBSModule.h"
 #include "ConfigDal.h"
@@ -28,4 +26,3 @@ uint32_t lobbsConfigGet(LoBBSCommandCtx &ctx, const char *key)
     return ctx.mod->config().dal().effectiveValue(ctx, key);
 }
 
-#endif

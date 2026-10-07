@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSConfig.h"
 #if LOBBS_SEED
 
@@ -20,5 +18,4 @@ void lobbsSeedAll(LoBBSModule &mod)
     LOBBS_BOOT_STEP("seed all: done");
 }
 
-#endif
 #endif

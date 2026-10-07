@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSInstall.h"
 #include "LoBBSCommandRegistry.h"
 #include "LoBBSConfig.h"
@@ -311,4 +309,3 @@ void lobbsInstallAutoSeed(LoBBSModule &mod)
 }
 #endif
 
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "MailDal.h"
 
 class MailApp
@@ -13,4 +11,3 @@ class MailApp
     MailDal dal_;
 };
 
-#endif

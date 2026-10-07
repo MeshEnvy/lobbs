@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSConfig.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -39,4 +37,3 @@ void lobbsInstallAutoSeed(LoBBSModule &mod);
 
 void lobbsInstallRegisterCommands();
 
-#endif

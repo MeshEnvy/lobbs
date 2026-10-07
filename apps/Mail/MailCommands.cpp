@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "MailCommands.h"
 #include "../../LoBBSCommandRegistry.h"
 #include "../../LoBBSConfig.h"
@@ -284,4 +282,3 @@ void lobbsMailRegisterCommands()
 #endif
 }
 
-#endif

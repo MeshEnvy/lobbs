@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSReplyCache.h"
 #include "apps/Config/ConfigCommands.h"
 #include "gps/RTC.h"
@@ -80,4 +78,3 @@ bool lobbsReplyCacheLoad(uint32_t sessionNodeId, LoBBSResponse &out)
     return true;
 }
 
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSInstall.h"
 #include "LoBBSVersion.h"
 #include "MeshModule.h"
@@ -58,4 +56,3 @@ class LoBBSModule : public SinglePortModule
 extern std::vector<std::string> *lobbsTestReplySink;
 #endif
 
-#endif

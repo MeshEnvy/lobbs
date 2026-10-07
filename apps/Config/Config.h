@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "ConfigDal.h"
 #include <lodb/LoDB.h>
 
@@ -14,4 +12,3 @@ class ConfigApp
     ConfigDal dal_;
 };
 
-#endif

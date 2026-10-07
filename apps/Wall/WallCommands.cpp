@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "WallCommands.h"
 #include "../../LoBBSCommandRegistry.h"
 #include "../../LoBBSHooks.h"
@@ -122,4 +120,3 @@ void lobbsWallRegisterCommands()
 #endif
 }
 
-#endif

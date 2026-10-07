@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "AuthCommands.h"
 #include "../../LoBBSCommandRegistry.h"
 #include "../../LoBBSHooks.h"
@@ -456,4 +454,3 @@ void lobbsAuthRegisterCommands()
 #endif
 }
 
-#endif

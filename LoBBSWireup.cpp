@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSWireup.h"
 #include "LoBBSHooks.h"
 #include "LoBBSInstall.h"
@@ -34,4 +32,3 @@ void lobbsWireup()
     lobbsFsRegisterCommands();
 }
 
-#endif

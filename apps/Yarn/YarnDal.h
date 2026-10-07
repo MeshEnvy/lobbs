@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include <lodb/LoDB.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -36,4 +34,3 @@ class YarnDal
     LoDb &lodb_;
 };
 
-#endif

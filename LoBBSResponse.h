@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSCommandCtx.h"
 #include <loscalar/LoScalar.h>
 #include <string>
@@ -21,4 +19,3 @@ void lobbsCommandReplyResponse(LoBBSCommandCtx &ctx, const LoBBSResponse &resp);
 void lobbsCommandReplyError(LoBBSCommandCtx &ctx, const char *message);
 void lobbsReplySendCachedPage(LoBBSCommandCtx &ctx);
 
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSConfig.h"
 #include <stdint.h>
 
@@ -26,4 +24,3 @@ struct LoBBSCommandCtx {
     uint32_t page = 1;
 };
 
-#endif

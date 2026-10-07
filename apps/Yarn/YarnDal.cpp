@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "YarnDal.h"
 #include "../AppUtil.h"
 #include "YarnRecords.h"
@@ -187,4 +185,3 @@ const char *YarnDal::appendWords(uint64_t userUuid, bool isSysop, const char *co
     return nullptr;
 }
 
-#endif

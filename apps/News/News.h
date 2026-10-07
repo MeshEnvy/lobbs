@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "NewsDal.h"
 
 class NewsApp
@@ -13,4 +11,3 @@ class NewsApp
     NewsDal dal_;
 };
 
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include <lodb/LoDB.h>
 #include <stdint.h>
 #include <vector>
@@ -33,4 +31,3 @@ class NewsDal
     LoDb &lodb_;
 };
 
-#endif

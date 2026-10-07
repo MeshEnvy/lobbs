@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "../../LoBBSConfig.h"
 #include <lodb/LoDB.h>
 #include <stdint.h>
@@ -63,4 +61,3 @@ class AuthDal
     SessionConfig sessionCfg_ = {LOBBS_SESSION_DEFAULT_MAX, LOBBS_SESSION_DEFAULT_IDLE_SEC};
 };
 
-#endif

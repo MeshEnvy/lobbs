@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSReply.h"
 #include "LoBBSResponse.h"
 #include "protocol/machine/paginate.h"
@@ -185,4 +183,3 @@ inline void lobbsRunProtocolTests()
     RUN_TEST(test_protocol_machine_serialize_escapes_and_fields);
 }
 
-#endif

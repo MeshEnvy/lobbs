@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include <lodb/LoDB.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -38,4 +36,3 @@ class WallDal
     LoDb &lodb_;
 };
 
-#endif

@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "AuthDal.h"
 #include "AuthRecords.h"
 #include "configuration.h"
@@ -359,4 +357,3 @@ bool AuthDal::kickUserByUsername(const char *username)
     return true;
 }
 
-#endif

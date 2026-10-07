@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "paginate.h"
 #include "LoBBSReply.h"
 #include <cstdio>
@@ -131,4 +129,3 @@ bool lobbsPaginatePlainText(const std::string &text, uint32_t page1, std::string
     return true;
 }
 
-#endif

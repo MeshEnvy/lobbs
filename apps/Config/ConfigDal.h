@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include <lodb/LoDB.h>
 #include <loscalar/LoScalar.h>
 #include <map>
@@ -37,4 +35,3 @@ class ConfigDal
     char lastValidateError_[128] = {0};
 };
 
-#endif

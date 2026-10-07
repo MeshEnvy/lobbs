@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSResponse.h"
 #include "LoBBSModule.h"
 #include "LoBBSReply.h"
@@ -116,4 +114,3 @@ void lobbsCommandReplyResponse(LoBBSCommandCtx &ctx, const LoBBSResponse &resp)
     lobbsRenderPage(ctx, resp);
 }
 
-#endif

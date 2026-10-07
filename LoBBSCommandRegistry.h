@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSCommandCtx.h"
 #include "LoBBSHooks.h"
 #include <stddef.h>
@@ -45,4 +43,3 @@ int lobbsArgShiftMany(LoBBSCommandCtx &ctx, const char *out[], int maxOut);
 
 void lobbsCommandsHandle(LoBBSModule *mod, const meshtastic_MeshPacket &mp, const LoBBSSession &session, char *line);
 
-#endif

@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSCommandCtx.h"
 #include "LoBBSResponse.h"
 #include <loscalar/LoScalar.h>
@@ -58,4 +56,3 @@ void lobbsDoAction(const char *name, LoBBSCommandCtx &ctx, const LoScalar &args)
 void lobbsApplyFilter(const char *name, LoBBSCommandCtx &ctx, LoScalar &value, const LoScalar &args);
 void lobbsApplyFilter(const char *name, LoBBSCommandCtx &ctx, std::vector<LoScalar> &value, const LoScalar &args);
 
-#endif

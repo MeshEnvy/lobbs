@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "NewsDal.h"
 #include "../../LoBBSConfig.h"
 #include "NewsRecords.h"
@@ -156,4 +154,3 @@ bool NewsDal::deleteNewsUuid(uint64_t newsUuidVal)
     return lodb_.deleteRecord("news", newsUuidVal) == LODB_OK;
 }
 
-#endif

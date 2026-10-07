@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSCommandRegistry.h"
 #include "LoBBSHooks.h"
 #include "LoBBSInstall.h"
@@ -375,4 +373,3 @@ void lobbsCommandsHandle(LoBBSModule *mod, const meshtastic_MeshPacket &mp, cons
     lobbsDoAction("slash_cmd", ctx, args);
 }
 
-#endif

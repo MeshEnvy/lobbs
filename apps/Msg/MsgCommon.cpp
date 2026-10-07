@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "MsgCommon.h"
 #include "../../LoBBSCommandRegistry.h"
 #include "../../LoBBSHooks.h"
@@ -58,4 +56,3 @@ void lobbsMsgRegisterDisplay()
     lobbsAddFilter("display_human", displayMsgHuman, LOBBS_HOOK_PRIORITY_FEATURE);
 }
 
-#endif

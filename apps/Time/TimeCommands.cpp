@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "TimeCommands.h"
 #include "../../LoBBSCommandRegistry.h"
 #include "../../LoBBSHooks.h"
@@ -77,4 +75,3 @@ void lobbsTimeRegisterCommands()
     lobbsAddFilter("help_for_topic", filterTimeHelpForTopic, LOBBS_HOOK_PRIORITY_TIME);
 }
 
-#endif

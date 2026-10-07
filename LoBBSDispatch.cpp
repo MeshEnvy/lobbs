@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSDispatch.h"
 #include "LoBBSCommandRegistry.h"
 #include "LoBBSModule.h"
@@ -77,4 +75,3 @@ ProcessMessage lobbsDispatchReceived(LoBBSModule *mod, const meshtastic_MeshPack
     return ProcessMessage::CONTINUE;
 }
 
-#endif

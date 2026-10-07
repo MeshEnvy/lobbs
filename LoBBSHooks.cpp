@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "LoBBSHooks.h"
 #include "configuration.h"
 #include <cstring>
@@ -97,4 +95,3 @@ void lobbsApplyFilter(const char *name, LoBBSCommandCtx &ctx, std::vector<LoScal
     }
 }
 
-#endif

@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "WallDal.h"
 #include "../AppUtil.h"
 #include "WallRecords.h"
@@ -205,4 +203,3 @@ const char *WallDal::applyPaintTokens(uint64_t userUuid, bool isSysop, const cha
     return nullptr;
 }
 
-#endif

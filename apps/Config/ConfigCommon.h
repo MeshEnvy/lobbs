@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "../../LoBBSCommandCtx.h"
 #include "ConfigRecords.h"
 #include <lodb/LoDB.h>
@@ -11,4 +9,3 @@ void lobbsConfigPushKey(std::vector<LoScalar> &keys, const char *key, uint32_t d
 
 uint32_t lobbsConfigGet(LoBBSCommandCtx &ctx, const char *key);
 
-#endif

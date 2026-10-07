@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "ConfigCommands.h"
 #include "../../LoBBSCommandRegistry.h"
 #include "../../LoBBSHooks.h"
@@ -197,4 +195,3 @@ void lobbsConfigRegisterCommands()
     lobbsAddFilter("help_for_topic", filterConfigHelpForTopic, LOBBS_HOOK_PRIORITY_FEATURE);
 }
 
-#endif

@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "../../LoBBSConfig.h"
 #if LOBBS_SEED
 
@@ -20,5 +18,4 @@ void lobbsSeedWall(LoBBSModule &mod)
     wall.applyPaintTokens(sysop, true, tokens, 5, LOBBS_WALL_DEFAULT_PERIOD_SEC, LOBBS_WALL_DEFAULT_MAX_CELLS);
 }
 
-#endif
 #endif

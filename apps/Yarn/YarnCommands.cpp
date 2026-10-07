@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "YarnCommands.h"
 #include "../../LoBBSCommandRegistry.h"
 #include "../../LoBBSHooks.h"
@@ -130,4 +128,3 @@ void lobbsYarnRegisterCommands()
 #endif
 }
 
-#endif

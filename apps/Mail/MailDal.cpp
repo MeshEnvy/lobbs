@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "MailDal.h"
 #include "../../LoBBSConfig.h"
 #include "MailRecords.h"
@@ -155,4 +153,3 @@ bool MailDal::deleteMailInboxIndex(uint64_t inboxOwnerUuid, uint32_t oneBasedInd
     return deleteMailUuid(uuid);
 }
 
-#endif

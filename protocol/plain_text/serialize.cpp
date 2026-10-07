@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "serialize.h"
 #include "LoBBSHooks.h"
 #include <lodb/LoDB.h>
@@ -51,4 +49,3 @@ bool lobbsSerializePlainText(const LoBBSCommandCtx &ctx, const LoBBSResponse &re
     return !out.empty();
 }
 
-#endif

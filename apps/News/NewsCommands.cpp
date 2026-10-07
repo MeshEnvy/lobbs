@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "NewsCommands.h"
 #include "../../LoBBSCommandRegistry.h"
 #include "../../LoBBSConfig.h"
@@ -260,4 +258,3 @@ void lobbsNewsRegisterCommands()
 #endif
 }
 
-#endif

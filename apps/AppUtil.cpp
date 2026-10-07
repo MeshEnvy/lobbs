@@ -1,5 +1,3 @@
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include "AppUtil.h"
 #include "../LoBBSCommandCtx.h"
 #include "../LoBBSCommandRegistry.h"
@@ -150,4 +148,3 @@ LoDbError lobbsQuotaAdd(LoDb &db, const char *table, uint64_t userUuid, uint32_t
     return db.upsert(table, userUuid, rec);
 }
 
-#endif

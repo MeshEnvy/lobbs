@@ -1,6 +1,4 @@
 #pragma once
-#if !MESHTASTIC_EXCLUDE_LOBBS
-
 #include <cstdint>
 
 /** Stored override row in table `config`. */
@@ -23,4 +21,3 @@ namespace ConfigValidateField
 inline constexpr uint32_t FIELD_VALUE = 0;
 } // namespace ConfigValidateField
 
-#endif
