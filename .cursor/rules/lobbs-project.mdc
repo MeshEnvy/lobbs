@@ -1,35 +1,34 @@
 ---
-description: LoBBS project context — greenfield on-firmware BBS for Meshtastic + MeshCore, lo-star conventions
+description: LoBBS project context. Greenfield on-firmware BBS for Meshtastic + MeshCore, plugin + thin forks
 alwaysApply: true
 ---
 
 # LoBBS
 
-Cross-platform, on-firmware BBS for **Meshtastic** and **MeshCore**. Greenfield: no backward compatibility, no legacy code paths — delete rather than dual-path, simplify rather than preserve old APIs.
+Cross-platform, on-firmware BBS for **Meshtastic** and **MeshCore**. Greenfield: no backward compatibility, no legacy code paths. Delete rather than dual-path, simplify rather than preserve old APIs.
 
-## Architecture (see [lo-star/README.md](lo-star/README.md))
+## Architecture
 
-Three layers — **thin fork, fat library**:
+**Plugin owns everything, forks stay upstream.**
 
-1. **lo-star** — shared portable helpers (settings, protobuf, logging, messaging, FS).
-2. **Product library** — portable LoBBS code lives in [`lobbs/`](lobbs/) (PlatformIO library, mirrors `lotato/lotato/` upstream). Business logic and protocol mapping belong here.
-3. **Firmware forks** ([`meshtastic/`](meshtastic/) submodule, MeshCore fork) — HAL, build glue, registration, and **thin delegates** into `lobbs::meshcore::…` / `lobbs::meshtastic::…`.
+1. **Plugin** (`lobbs/`, PlatformIO library): core, apps, LoScalar, LoDB, LoFS, protocol, and the platform providers under `lobbs/platforms/<platform>/`. On MeshCore the plugin also owns the firmware app (`setup()`/`loop()`).
+2. **Firmware forks** ([`meshtastic/`](meshtastic/), [`meshcore/`](meshcore/) submodules, both on `lobbs`): upstream plus one new `variants/lobbs/*.ini` that defines the `*_lobbs` envs and pulls in the plugin.
 
-Example reference: [`lotato/lotato/platforms/meshcore/MeshcoreCliGateway.h`](lotato/lotato/platforms/meshcore/MeshcoreCliGateway.h) shows the `namespace Lotato { init(); delegate(); }` façade + inner `lotato::meshcore::Delegate` pattern to mirror.
+Until extraction finishes, LoBBS code still lives in-tree at `meshtastic/src/modules/LoBBS/`.
 
-## Where code goes
+## Fork diff policy
 
-- Root [`src/`](src/) is Meshtastic-module glue (`LoBBSModule.*`, `LoBBSDal.*`, `lobbs.proto`) — keep it minimal fork-side.
-- New portable behavior goes in [`lobbs/`](lobbs/); platform delegates go under `lobbs/platforms/<platform>/`.
-- Submodules: see [`.gitmodules`](.gitmodules) (`lo-star`, `lotato`, `meshtastic`). Do not edit submodule contents from this repo.
+- Allowed: one new `variants/lobbs/` ini per fork.
+- No edits to upstream files. If an extension point is missing, make the smallest possible change, list it in [`README.md`](README.md), and open an upstream PR.
 
-## Setup / build
+## Workflow
 
-Follow [`lo-star/README.md`](lo-star/README.md) for submodule setup, `git submodule update --init --recursive`, PlatformIO `symlink://../lo-star` dependency, upstream-tag branching, release tag naming (`<product>-<ver>-<base>-<ver>`), and MeshForge distribution. Do not restate that content elsewhere.
+- Work inside the submodules; commit and push there, then commit the pin bump here.
+- Keep both submodules on `lobbs` (`.gitmodules` `branch = lobbs`).
 
 ## Style
 
 - Bad: keep `#ifdef LEGACY_…` branches "just in case".
   Good: delete the old path.
-- Bad: grow protocol logic inside a firmware-fork class.
-  Good: call one line into `lobbs::<platform>::Delegate` and implement there.
+- Bad: grow BBS logic inside a firmware fork.
+  Good: implement it in the plugin; the fork only selects the env.
