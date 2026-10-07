@@ -1,8 +1,0 @@
-[submodule "meshtastic"]
-	path = meshtastic
-	url = git@github.com:MeshEnvy/lobbs-meshtastic-firmware.git
-	branch = lobbs
-[submodule "meshcore"]
-	path = meshcore
-	url = git@github.com:MeshEnvy/lobbs-meshcore-firmware.git
-	branch = lobbs
