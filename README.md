@@ -9,7 +9,7 @@ On-firmware bulletin board for **Meshtastic** and **MeshCore**. This repo is the
 | [MeshEnvy/lobbs-meshtastic-firmware](https://github.com/MeshEnvy/lobbs-meshtastic-firmware) | `lobbs` |
 | [MeshEnvy/lobbs-meshcore-firmware](https://github.com/MeshEnvy/lobbs-meshcore-firmware) | `lobbs` |
 
-Each fork builds standalone. Its `variants/lobbs/` config pins this plugin by commit in `lib_deps`, so cloning one fork is enough to build it.
+Each fork builds standalone. Meshtastic pulls the plugin via `lobbs-overrides.ini` on every env; MeshCore adds `LOBBS_PLATFORM_MESHCORE` and optional example wiring. Committed pins use `lib_deps` by commit hash.
 
 ## Local development
 
@@ -29,8 +29,24 @@ The plugin is tagged `vX.Y.Z`. Each fork release is tagged `lobbs-vX.Y.Z.<lobbs 
 
 ## Fork diff policy
 
-The forks stay upstream plus one new folder: `variants/lobbs/`, which defines the `*_lobbs` build envs and pulls in the plugin. No edits to upstream files. If an extension point is missing, the fix is the smallest possible change, listed here and paired with an upstream PR.
+Meshtastic: `lobbs-overrides.ini` plus minimal upstream hooks (`Modules.cpp`, linker scripts for extra flash). MeshCore: `lobbs-overrides.ini`, `-Isrc`, and example chat integration. No broad upstream edits. If an extension point is missing, the fix is the smallest possible change, listed in the fork README and paired with an upstream PR when feasible.
 
-Meshtastic integration lives in `lobbs-meshtastic-firmware` (`lobbs-overrides.ini`, `variants/lobbs/`). This repo is the plugin source.
+This repo is the plugin source; forks pin it by commit.
+
+## Platforms
+
+LoBBS ships for **Meshtastic** and **MeshCore** only (`LOBBS_PLATFORM_MESHTASTIC`, `LOBBS_PLATFORM_MESHCORE`). Host-side checks use `LOBBS_PLATFORM_NATIVE` in `ci/host/` (protocol paging tests). Command integration tests run from the Meshtastic fork `native-macos` env, which upstream builds with Portduino. That is Meshtastic’s desktop harness, not a third LoBBS product platform.
+
+## Layout
+
+| Path | Role |
+| --- | --- |
+| `core/` | Portable BBS kernel (dispatch, hooks, install, reply cache) |
+| `platforms/` | Meshtastic and MeshCore PAL, plus native host PAL for CI |
+| `lofs/`, `lodb/`, `loscalar/`, `loutil/` | Storage and codecs |
+| `apps/` | Bundled BBS features |
+| `protocol/` | Human and machine paging |
+| `ci/host/` | Plugin-only protocol tests (`pio test -e host`) |
+| `tests/` | Headers consumed by the Meshtastic fork native tests |
 
 Architecture and greenfield rules: [`.cursor/rules/lobbs-project.mdc`](.cursor/rules/lobbs-project.mdc).

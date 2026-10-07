@@ -1,11 +1,10 @@
 #include "MailDal.h"
-#include "../../LoBBSConfig.h"
+#include "../../core/LoBBSConfig.h"
 #include "MailRecords.h"
-#include "configuration.h"
-#include "gps/RTC.h"
+#include "platforms/LoPlatform.h"
 #include <cstring>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 MailDal::MailDal(LoDb &lodb) : lodb_(lodb)
 {
@@ -85,7 +84,7 @@ LoDbError MailDal::sendMail(uint64_t fromUserUuid, uint64_t toUserUuid, const ch
 
     LoDbError err = lodb_.insert("mail", mailUuidVal, mail);
     if (err != LODB_OK)
-        LOG_ERROR("Failed to send mail");
+        LOBBS_LOG_ERROR("Failed to send mail");
     return err;
 }
 

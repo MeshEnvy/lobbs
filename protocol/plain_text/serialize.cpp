@@ -1,8 +1,8 @@
 #include "serialize.h"
-#include "LoBBSHooks.h"
+#include "core/LoBBSHooks.h"
 #include <lodb/LoDB.h>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 static void lobbsDisplayGeneric(const LoScalar &record, std::string &lineOut)
 {

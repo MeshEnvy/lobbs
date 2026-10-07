@@ -79,9 +79,7 @@ static constexpr uint32_t LODB_F_ID = 99;
 void lodb_uuid_to_hex(lodb_uuid_t uuid, char hex_out[17]);
 lodb_uuid_t lodb_new_uuid(const char *str, uint64_t salt);
 
-/** Weak by default (`millis()`); override with a strong definition for wall time. */
 uint32_t lodb_now_ms(void);
-/** Unix seconds from getTime() when RTC is linked; else 0. */
 uint32_t lodb_now_unix(void);
 
 class LoDb

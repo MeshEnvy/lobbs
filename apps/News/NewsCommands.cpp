@@ -1,10 +1,10 @@
 #include "NewsCommands.h"
-#include "../../LoBBSCommandRegistry.h"
-#include "../../LoBBSConfig.h"
-#include "../../LoBBSHooks.h"
-#include "../../LoBBSModule.h"
-#include "../../LoBBSReply.h"
-#include "../../LoBBSResponse.h"
+#include "../../core/LoBBSCommandRegistry.h"
+#include "../../core/LoBBSConfig.h"
+#include "../../core/LoBBSHooks.h"
+#include "../../core/LoBBSKernel.h"
+#include "../../core/LoBBSReply.h"
+#include "../../core/LoBBSResponse.h"
 #include "../AppUtil.h"
 #include "../Msg/MsgCommon.h"
 #include "NewsDal.h"
@@ -16,9 +16,9 @@
 #include <lodb/LoDB.h>
 #include <vector>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
-static void newsAppendListRecord(LoBBSModule *mod, LoBBSResponse &resp, uint32_t oneBasedIndex, const LoBBSNewsEntry &entry)
+static void newsAppendListRecord(LoBBSKernel *kernel, LoBBSResponse &resp, uint32_t oneBasedIndex, const LoBBSNewsEntry &entry)
 {
     const LoScalar &news = entry.news;
     char name[LOBBS_USERNAME_BUFFER_SIZE];
@@ -27,7 +27,7 @@ static void newsAppendListRecord(LoBBSModule *mod, LoBBSResponse &resp, uint32_t
     // One char past the preview limit is enough for lobbsAppTruncMsg to add "...".
     char msg[LOBBS_LIST_LINE_TRUNC_MAX_CHARS + 2];
     char line[LOBBS_REPLY_BYTES + 1];
-    lobbsAppUsernameForUuid(mod, NewsDal::newsAuthorUuid(news), name, sizeof(name));
+    lobbsAppUsernameForUuid(kernel, NewsDal::newsAuthorUuid(news), name, sizeof(name));
     lobbsAppTimeAgo(NewsDal::newsTimestamp(news), when, sizeof(when));
     NewsDal::newsMessage(news, msg, sizeof(msg));
     lobbsAppTruncMsg(msg, trunc, sizeof(trunc), LOBBS_LIST_LINE_TRUNC_MAX_CHARS);
@@ -48,7 +48,7 @@ static void newsSubList(LoBBSCommandCtx &ctx)
     if (sub && strcasecmp(sub, "list") == 0)
         lobbsArgShift(ctx);
 
-    auto all = ctx.mod->news().dal().getAllNewsForUser(lobbsCtxUserUuid(ctx));
+    auto all = ctx.kernel->news().dal().getAllNewsForUser(lobbsCtxUserUuid(ctx));
     LoBBSResponse resp;
     if (all.empty()) {
         lobbsResponseSetError(resp, "No news");
@@ -56,7 +56,7 @@ static void newsSubList(LoBBSCommandCtx &ctx)
         return;
     }
     for (size_t i = 0; i < all.size(); i++)
-        newsAppendListRecord(ctx.mod, resp, (uint32_t)(i + 1), all[i]);
+        newsAppendListRecord(ctx.kernel, resp, (uint32_t)(i + 1), all[i]);
     lobbsCommandReplyResponse(ctx, resp);
 }
 
@@ -72,7 +72,7 @@ static void newsSubRead(LoBBSCommandCtx &ctx, bool numericShorthand)
         lobbsCommandReplyResponse(ctx, resp);
         return;
     }
-    NewsDal &news = ctx.mod->news().dal();
+    NewsDal &news = ctx.kernel->news().dal();
     auto newsItems = news.getAllNewsForUser(lobbsCtxUserUuid(ctx));
     if (idx == 0 || idx > newsItems.size()) {
         LoBBSResponse resp;
@@ -85,7 +85,7 @@ static void newsSubRead(LoBBSCommandCtx &ctx, bool numericShorthand)
     char when[LOBBS_TIME_AGO_BUFFER_SIZE];
     char body[LOBBS_MESSAGE_READ_BODY_BUFFER_SIZE];
     char header[LOBBS_USERNAME_BUFFER_SIZE + LOBBS_TIME_AGO_BUFFER_SIZE + 16];
-    lobbsAppUsernameForUuid(ctx.mod, NewsDal::newsAuthorUuid(item), name, sizeof(name));
+    lobbsAppUsernameForUuid(ctx.kernel, NewsDal::newsAuthorUuid(item), name, sizeof(name));
     NewsDal::newsMessage(item, body, sizeof(body));
     lobbsAppTimeAgo(NewsDal::newsTimestamp(item), when, sizeof(when));
     snprintf(header, sizeof(header), "From: @%s (%s)", name, when);
@@ -107,7 +107,7 @@ static void newsSubUnread(LoBBSCommandCtx &ctx)
     uint32_t idx = 0;
     if (!lobbsMsgShiftIndex(ctx, 1, "Usage: /news unread N", "Invalid news number.", idx))
         return;
-    NewsDal &news = ctx.mod->news().dal();
+    NewsDal &news = ctx.kernel->news().dal();
     auto newsItems = news.getAllNewsForUser(lobbsCtxUserUuid(ctx));
     if (idx == 0 || idx > newsItems.size()) {
         LoBBSResponse resp;
@@ -126,7 +126,7 @@ static void newsSubDelete(LoBBSCommandCtx &ctx)
     uint32_t idx = 0;
     if (!lobbsMsgShiftIndex(ctx, 1, "Usage: /news delete N", "Invalid news number.", idx))
         return;
-    NewsDal &news = ctx.mod->news().dal();
+    NewsDal &news = ctx.kernel->news().dal();
     auto newsItems = news.getAllNewsForUser(lobbsCtxUserUuid(ctx));
     if (idx == 0 || idx > newsItems.size()) {
         LoBBSResponse resp;
@@ -163,7 +163,7 @@ static void newsSubPost(LoBBSCommandCtx &ctx)
         return;
     }
     LoBBSResponse resp;
-    LoDbError err = ctx.mod->news().dal().postNews(lobbsCtxUserUuid(ctx), msgBody);
+    LoDbError err = ctx.kernel->news().dal().postNews(lobbsCtxUserUuid(ctx), msgBody);
     lobbsRecordPush(resp.records, err == LODB_OK ? "News posted." : lobbsDbErrorText(err, "Failed to post news."));
     lobbsCommandReplyResponse(ctx, resp);
 }
@@ -221,16 +221,16 @@ static void filterNewsHelpForTopic(LoBBSCommandCtx *ctx, LoScalar &value, const 
 static void filterNewsStatusLines(LoBBSCommandCtx *ctx, std::vector<LoScalar> &lines, const LoScalar &args)
 {
     (void)args;
-    if (!ctx || !ctx->mod)
+    if (!ctx || !ctx->kernel)
         return;
     char title[64];
     char value[32];
     if (lobbsCtxLoggedIn(*ctx)) {
-        uint32_t n = ctx->mod->news().dal().countUnreadNews(lobbsCtxUserUuid(*ctx));
+        uint32_t n = ctx->kernel->news().dal().countUnreadNews(lobbsCtxUserUuid(*ctx));
         snprintf(title, sizeof(title), "News");
         snprintf(value, sizeof(value), "%u unread", (unsigned)n);
     } else {
-        uint32_t n = ctx->mod->news().dal().countAllNews();
+        uint32_t n = ctx->kernel->news().dal().countAllNews();
         snprintf(title, sizeof(title), "News");
         snprintf(value, sizeof(value), "%u total", (unsigned)n);
     }
@@ -242,8 +242,8 @@ static void filterNewsStatusLines(LoBBSCommandCtx *ctx, std::vector<LoScalar> &l
 static void actionNewsSeed(LoBBSCommandCtx *ctx, const LoScalar &args)
 {
     (void)args;
-    if (ctx && ctx->mod)
-        lobbsSeedNews(*ctx->mod);
+    if (ctx && ctx->kernel)
+        lobbsSeedNews(*ctx->kernel);
 }
 #endif
 

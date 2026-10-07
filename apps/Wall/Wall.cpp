@@ -1,6 +1,6 @@
 #include "Wall.h"
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 WallApp::WallApp(LoDb &lodb) : dal_(lodb) {}
 

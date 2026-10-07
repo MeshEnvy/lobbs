@@ -1,8 +1,9 @@
 #include "paginate.h"
-#include "LoBBSReply.h"
+#include "core/LoBBSReply.h"
+#include "platforms/LoPlatform.h"
 #include <cstdio>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 bool lobbsPaginateMachine(uint32_t reqId, const std::string &document, uint32_t page1, std::string &pageOut, const char **errMsg)
 {
@@ -12,7 +13,8 @@ bool lobbsPaginateMachine(uint32_t reqId, const std::string &document, uint32_t 
 
     char prefix[40];
     size_t prefixLen = (size_t)snprintf(prefix, sizeof(prefix), "<%u>ok\n", reqId);
-    if (prefixLen + document.size() <= LOBBS_REPLY_BYTES) {
+    const size_t pageBytes = lobbsPlatformMaxReplyBytes();
+    if (prefixLen + document.size() <= pageBytes) {
         if (page1 > 1) {
             if (errMsg)
                 *errMsg = "No such page.";
@@ -29,7 +31,7 @@ bool lobbsPaginateMachine(uint32_t reqId, const std::string &document, uint32_t 
     uint32_t pages = 0;
     while (true) {
         prefixLen = (size_t)snprintf(prefix, sizeof(prefix), "<%u>ok [%u:%u]\n", reqId, widest, widest);
-        budget = LOBBS_REPLY_BYTES - prefixLen;
+        budget = pageBytes - prefixLen;
         pages = (uint32_t)((document.size() + budget - 1) / budget);
         if (pages <= widest)
             break;

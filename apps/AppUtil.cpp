@@ -1,16 +1,16 @@
 #include "AppUtil.h"
-#include "../LoBBSCommandCtx.h"
-#include "../LoBBSCommandRegistry.h"
-#include "../LoBBSConfig.h"
-#include "../LoBBSModule.h"
-#include "../LoBBSResponse.h"
+#include "../core/LoBBSCommandCtx.h"
+#include "../core/LoBBSCommandRegistry.h"
+#include "../core/LoBBSConfig.h"
+#include "../core/LoBBSKernel.h"
+#include "../core/LoBBSResponse.h"
 #include "Auth/AuthDal.h"
-#include "gps/RTC.h"
+#include "platforms/LoPlatform.h"
 #include <cstdio>
 #include <cstring>
 #include <lodb/LoDB.h>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 void lobbsAppCopyCapped(char *dst, size_t dstCap, const char *src, size_t srcCap)
 {
@@ -27,7 +27,7 @@ void lobbsAppCopyCapped(char *dst, size_t dstCap, const char *src, size_t srcCap
 
 void lobbsAppTimeAgo(uint32_t timestamp, char *buffer, size_t bufferSize)
 {
-    uint32_t now = getTime();
+    uint32_t now = lobbsPlatformUnixNow();
     if (now < timestamp) {
         snprintf(buffer, bufferSize, "now");
         return;
@@ -56,33 +56,33 @@ void lobbsAppTruncMsg(const char *message, char *buffer, size_t bufferSize, size
     }
 }
 
-bool lobbsAppLoadUser(LoBBSModule *mod, uint64_t uuid, LoScalar *outUser)
+bool lobbsAppLoadUser(LoBBSKernel *kernel, uint64_t uuid, LoScalar *outUser)
 {
-    if (!mod || !outUser || uuid == 0)
+    if (!kernel || !outUser || uuid == 0)
         return false;
-    return mod->auth().dal().loadUserByUuid(uuid, outUser);
+    return kernel->auth().dal().loadUserByUuid(uuid, outUser);
 }
 
-void lobbsAppUsernameForUuid(LoBBSModule *mod, uint64_t uuid, char *buf, size_t bufCap)
+void lobbsAppUsernameForUuid(LoBBSKernel *kernel, uint64_t uuid, char *buf, size_t bufCap)
 {
     if (!buf || bufCap == 0)
         return;
     buf[0] = '\0';
     LoScalar user;
-    if (!lobbsAppLoadUser(mod, uuid, &user) || !AuthDal::userUsername(user, buf, bufCap) || !buf[0])
+    if (!lobbsAppLoadUser(kernel, uuid, &user) || !AuthDal::userUsername(user, buf, bufCap) || !buf[0])
         lobbsAppCopyCapped(buf, bufCap, "unknown", 7);
 }
 
-uint64_t lobbsAppUuidForUsername(LoBBSModule *mod, const char *username)
+uint64_t lobbsAppUuidForUsername(LoBBSKernel *kernel, const char *username)
 {
-    if (!mod || !username || !username[0])
+    if (!kernel || !username || !username[0])
         return 0;
-    return mod->auth().dal().getUserUuidByUsername(username);
+    return kernel->auth().dal().getUserUuidByUsername(username);
 }
 
 bool lobbsAppResolveUsername(LoBBSCommandCtx &ctx, const char *username, uint64_t &uuidOut)
 {
-    uuidOut = lobbsAppUuidForUsername(ctx.mod, username);
+    uuidOut = lobbsAppUuidForUsername(ctx.kernel, username);
     if (uuidOut != 0)
         return true;
     char msg[64];
@@ -100,7 +100,7 @@ static uint32_t quotaLoad(LoDb &db, const char *table, uint64_t userUuid, uint32
     uint32_t start = 0;
     if (db.get(table, userUuid, rec) != LODB_OK || !rec.getUint32(LoBBSQuotaField::FIELD_CYCLE_START, start) || start == 0)
         return 0;
-    if (getTime() >= start + periodSec)
+    if (lobbsPlatformUnixNow() >= start + periodSec)
         return 0;
     for (size_t i = 0; i < n; i++)
         rec.getUint32(LoBBSQuotaField::FIELD_USED + (uint32_t)i, used[i]);
@@ -139,7 +139,7 @@ LoDbError lobbsQuotaAdd(LoDb &db, const char *table, uint64_t userUuid, uint32_t
     uint32_t used[LOBBS_QUOTA_MAX_COUNTERS];
     uint32_t start = quotaLoad(db, table, userUuid, periodSec, used, n);
     if (start == 0)
-        start = getTime();
+        start = lobbsPlatformUnixNow();
     LoScalar rec;
     rec.setUint64(LoBBSQuotaField::FIELD_USER_UUID, userUuid);
     rec.setUint32(LoBBSQuotaField::FIELD_CYCLE_START, start);

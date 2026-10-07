@@ -1,16 +1,13 @@
 #include "AuthDal.h"
 #include "AuthRecords.h"
-#include "configuration.h"
-#include "gps/RTC.h"
-#include "mesh/NodeDB.h"
-#include "mesh/Throttle.h"
+#include "platforms/LoPlatform.h"
 #include <SHA256.h>
 #include <algorithm>
 #include <cctype>
 #include <cstring>
 #include <vector>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 static void normalizeUsername(const char *username, char *normalized)
 {
@@ -55,7 +52,7 @@ static lodb_uuid_t usernameToUuid(const char *username)
 {
     char normalized[LOBBS_USERNAME_BUFFER_SIZE];
     normalizeUsername(username, normalized);
-    return lodb_new_uuid(normalized, nodeDB->getNodeNum());
+    return lodb_new_uuid(normalized, lobbsPlatformLocalNodeId());
 }
 
 static const char *stristrLocal(const char *haystack, const char *needle)
@@ -141,17 +138,17 @@ bool AuthDal::loadUserByUsername(const char *username, LoScalar *user)
     lodb_uuid_t userUuid = usernameToUuid(username);
     LoDbError err = lodb_.get("users", userUuid, *user);
     if (err == LODB_OK) {
-        LOG_DEBUG("Loaded user by username: %s", username);
+        LOBBS_LOG_DEBUG("Loaded user by username: %s", username);
         return true;
     }
-    LOG_DEBUG("User not found: %s", username);
+    LOBBS_LOG_DEBUG("User not found: %s", username);
     return false;
 }
 
 void AuthDal::applySessionConfig(const SessionConfig &cfg)
 {
     if (cfg.maxSessions < sessions_.size()) {
-        const uint32_t now = millis();
+        const uint32_t now = lobbsPlatformMillis();
         std::sort(sessions_.begin(), sessions_.end(), [now](const Session &a, const Session &b) {
             if (a.used != b.used)
                 return a.used;
@@ -164,7 +161,8 @@ void AuthDal::applySessionConfig(const SessionConfig &cfg)
 
 bool AuthDal::sessionExpired(const Session &s) const
 {
-    return !Throttle::isWithinTimespanMs(s.lastActiveMs, sessionCfg_.idleSeconds * 1000u);
+    const uint32_t idleMs = sessionCfg_.idleSeconds * 1000u;
+    return (lobbsPlatformMillis() - s.lastActiveMs) >= idleMs;
 }
 
 AuthDal::Session *AuthDal::findSession(uint32_t nodeId)
@@ -173,7 +171,7 @@ AuthDal::Session *AuthDal::findSession(uint32_t nodeId)
         if (!s.used || s.nodeId != nodeId)
             continue;
         if (sessionExpired(s)) {
-            LOG_INFO("Session for node 0x%08x expired", nodeId);
+            LOBBS_LOG_INFO("Session for node 0x%08x expired", nodeId);
             s = Session{};
             return nullptr;
         }
@@ -192,18 +190,18 @@ bool AuthDal::loadUserByNodeId(uint32_t nodeId, LoScalar *user, uint32_t *sessio
 {
     Session *s = findSession(nodeId);
     if (!s) {
-        LOG_DEBUG("No session found for node 0x%08x", nodeId);
+        LOBBS_LOG_DEBUG("No session found for node 0x%08x", nodeId);
         return false;
     }
 
     if (lodb_.get("users", s->userUuid, *user) != LODB_OK) {
-        LOG_WARN("Session 0x%08x references missing user, removing session", nodeId);
+        LOBBS_LOG_WARN("Session 0x%08x references missing user, removing session", nodeId);
         *s = Session{};
         return false;
     }
 
-    s->lastActiveMs = millis();
-    LOG_DEBUG("Loaded user by node ID: 0x%08x -> UUID: " LODB_UUID_FMT, nodeId, LODB_UUID_ARGS(s->userUuid));
+    s->lastActiveMs = lobbsPlatformMillis();
+    LOBBS_LOG_DEBUG("Loaded user by node ID: 0x%08x -> UUID: " LODB_UUID_FMT, nodeId, LODB_UUID_ARGS(s->userUuid));
     if (sessionNodeIdOut)
         *sessionNodeIdOut = nodeId;
     if (authUserUuidOut)
@@ -235,11 +233,11 @@ LoDbError AuthDal::createUser(const char *username, const char *password, uint32
     user.setBool(AuthUser::FIELD_SYSOP, asSysop);
     LoDbError err = lodb_.insert("users", userUuid, user);
     if (err != LODB_OK) {
-        LOG_ERROR("Failed to create user: %s", username);
+        LOBBS_LOG_ERROR("Failed to create user: %s", username);
         return err;
     }
 
-    LOG_INFO("Created user: %s (sysop: %s)", username, asSysop ? "yes" : "no");
+    LOBBS_LOG_INFO("Created user: %s (sysop: %s)", username, asSysop ? "yes" : "no");
     return loginUser(username, nodeId) ? LODB_OK : LODB_ERR_INVALID;
 }
 
@@ -258,7 +256,7 @@ bool AuthDal::loginUser(const char *username, uint32_t nodeId)
 {
     Session *s = findSession(nodeId);
     if (!s) {
-        const uint32_t now = millis();
+        const uint32_t now = lobbsPlatformMillis();
         uint32_t oldestAge = 0;
         for (auto &c : sessions_) {
             if (!c.used || sessionExpired(c)) {
@@ -273,15 +271,15 @@ bool AuthDal::loginUser(const char *username, uint32_t nodeId)
         if (!s)
             return false;
         if (s->used && !sessionExpired(*s))
-            LOG_INFO("Session table full, evicting node 0x%08x", s->nodeId);
+            LOBBS_LOG_INFO("Session table full, evicting node 0x%08x", s->nodeId);
     }
 
     *s = Session{};
     s->used = true;
     s->nodeId = nodeId;
     s->userUuid = usernameToUuid(username);
-    s->lastActiveMs = millis();
-    LOG_INFO("Created session for user %s on node 0x%08x", username, nodeId);
+    s->lastActiveMs = lobbsPlatformMillis();
+    LOBBS_LOG_INFO("Created session for user %s on node 0x%08x", username, nodeId);
     return true;
 }
 
@@ -290,10 +288,10 @@ bool AuthDal::logoutUser(uint32_t nodeId)
     Session *s = findSession(nodeId);
     if (s) {
         *s = Session{};
-        LOG_INFO("Logged out node 0x%08x", nodeId);
+        LOBBS_LOG_INFO("Logged out node 0x%08x", nodeId);
         return true;
     }
-    LOG_WARN("No session found to log out for node 0x%08x", nodeId);
+    LOBBS_LOG_WARN("No session found to log out for node 0x%08x", nodeId);
     return false;
 }
 

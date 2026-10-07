@@ -1,26 +1,26 @@
-#include "../../LoBBSConfig.h"
+#include "../../core/LoBBSConfig.h"
 #if LOBBS_SEED
 
-#include "../../LoBBSModule.h"
+#include "../../core/LoBBSKernel.h"
 #include "../AppUtil.h"
 #include "MailDal.h"
 #include "MailSeed.h"
 #include <cstdio>
 #include <vector>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
-void lobbsSeedMail(LoBBSModule &mod)
+void lobbsSeedMail(LoBBSKernel &kernel)
 {
-    MailDal &mail = mod.mail().dal();
-    uint64_t sysop = lobbsAppUuidForUsername(&mod, "sysop");
+    MailDal &mail = kernel.mail().dal();
+    uint64_t sysop = lobbsAppUuidForUsername(&kernel, "sysop");
     if (!sysop)
         return;
 
     for (int i = 1; i <= 8; i++) {
         char fromName[16];
         snprintf(fromName, sizeof(fromName), "demo%02d", i);
-        uint64_t fromUuid = lobbsAppUuidForUsername(&mod, fromName);
+        uint64_t fromUuid = lobbsAppUuidForUsername(&kernel, fromName);
         if (!fromUuid)
             continue;
         char body[64];

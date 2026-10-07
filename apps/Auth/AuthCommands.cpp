@@ -1,19 +1,18 @@
 #include "AuthCommands.h"
-#include "../../LoBBSCommandRegistry.h"
-#include "../../LoBBSHooks.h"
-#include "../../LoBBSModule.h"
-#include "../../LoBBSResponse.h"
+#include "../../core/LoBBSCommandRegistry.h"
+#include "../../core/LoBBSHooks.h"
+#include "../../core/LoBBSKernel.h"
+#include "../../core/LoBBSResponse.h"
 #include "../AppUtil.h"
 #include "../Config/ConfigCommon.h"
 #include "AuthDal.h"
 #include "AuthRecords.h"
-#include "mesh/NodeDB.h"
 #include <cstdio>
 #include <cstring>
 #include <lodb/LoDB.h>
 #include <string>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 static bool passwordLongEnough(LoBBSCommandCtx &ctx, const char *password)
 {
@@ -56,7 +55,7 @@ static void handleWhoami(LoBBSCommandCtx &ctx)
 
 static void handleLogout(LoBBSCommandCtx &ctx)
 {
-    ctx.mod->auth().dal().logoutUser(ctx.session.nodeId);
+    ctx.kernel->auth().dal().logoutUser(ctx.session.nodeId);
     LoBBSResponse resp;
     lobbsRecordPush(resp.records, "Goodbye!");
     lobbsCommandReplyResponse(ctx, resp);
@@ -64,7 +63,7 @@ static void handleLogout(LoBBSCommandCtx &ctx)
 
 static void handleLogin(LoBBSCommandCtx &ctx)
 {
-    AuthDal &auth = ctx.mod->auth().dal();
+    AuthDal &auth = ctx.kernel->auth().dal();
     const char *username = lobbsArgShift(ctx);
     const char *password = lobbsArgShift(ctx);
     LoBBSResponse resp;
@@ -90,13 +89,13 @@ static void handleLogin(LoBBSCommandCtx &ctx)
             lobbsCommandReplyResponse(ctx, resp);
             return;
         }
-        const uint32_t sessionKey = getFrom(ctx.mp);
+        const uint32_t sessionKey = ctx.inbound.from.key;
         if (!auth.loginUser(username, sessionKey)) {
             lobbsResponseSetError(resp, "Error creating session");
             lobbsCommandReplyResponse(ctx, resp);
             return;
         }
-    } else if (LoDbError err = auth.createUser(username, password, getFrom(ctx.mp))) {
+    } else if (LoDbError err = auth.createUser(username, password, ctx.inbound.from.key)) {
         lobbsResponseSetError(resp, lobbsDbErrorText(err, "Error creating account"));
         lobbsCommandReplyResponse(ctx, resp);
         return;
@@ -139,7 +138,7 @@ static bool passwdApply(AuthDal &auth, const char *username, const char *newPass
 
 static void handlePasswd(LoBBSCommandCtx &ctx)
 {
-    AuthDal &auth = ctx.mod->auth().dal();
+    AuthDal &auth = ctx.kernel->auth().dal();
     const char *a = lobbsArgShift(ctx);
     const char *b = lobbsArgShift(ctx);
     const char *c = lobbsArgShift(ctx);
@@ -180,7 +179,7 @@ static void usersSubList(LoBBSCommandCtx &ctx)
     const char *sub = lobbsArgPeek(ctx);
     if (sub && strcasecmp(sub, "list") == 0)
         lobbsArgShift(ctx);
-    AuthDal &auth = ctx.mod->auth().dal();
+    AuthDal &auth = ctx.kernel->auth().dal();
     auto users = auth.listUsers(nullptr);
     LoBBSResponse resp;
     if (users.empty()) {
@@ -206,7 +205,7 @@ static void usersSubFind(LoBBSCommandCtx &ctx)
     strncpy(filterBuf, lobbsArgRest(ctx), sizeof(filterBuf) - 1);
     filterBuf[sizeof(filterBuf) - 1] = '\0';
 
-    AuthDal &auth = ctx.mod->auth().dal();
+    AuthDal &auth = ctx.kernel->auth().dal();
     auto users = auth.listUsers(filterBuf[0] ? filterBuf : nullptr);
     LoBBSResponse resp;
     if (users.empty()) {
@@ -230,7 +229,7 @@ static void usersSubKick(LoBBSCommandCtx &ctx)
         return;
     }
     LoBBSResponse resp;
-    lobbsRecordPush(resp.records, ctx.mod->auth().dal().kickUserByUsername(user) ? "Sessions cleared." : "User not found.");
+    lobbsRecordPush(resp.records, ctx.kernel->auth().dal().kickUserByUsername(user) ? "Sessions cleared." : "User not found.");
     lobbsCommandReplyResponse(ctx, resp);
 }
 
@@ -245,7 +244,7 @@ static void usersSubPromote(LoBBSCommandCtx &ctx)
         return;
     }
     LoBBSResponse resp;
-    LoDbError err = ctx.mod->auth().dal().setUserSysopByUsername(user, true);
+    LoDbError err = ctx.kernel->auth().dal().setUserSysopByUsername(user, true);
     lobbsRecordPush(resp.records, err == LODB_OK ? "Promoted." : lobbsDbErrorText(err, "User not found."));
     lobbsCommandReplyResponse(ctx, resp);
 }
@@ -260,7 +259,7 @@ static void usersSubDemote(LoBBSCommandCtx &ctx)
         lobbsCommandReplyResponse(ctx, resp);
         return;
     }
-    AuthDal &auth = ctx.mod->auth().dal();
+    AuthDal &auth = ctx.kernel->auth().dal();
     LoScalar target;
     LoBBSResponse resp;
     if (!auth.loadUserByUsername(user, &target)) {
@@ -355,14 +354,14 @@ static void filterAuthConfigKeys(LoBBSCommandCtx *ctx, std::vector<LoScalar> &ke
 
 static void actionAuthConfigChanged(LoBBSCommandCtx *ctx, const LoScalar &args)
 {
-    if (!ctx || !ctx->mod)
+    if (!ctx || !ctx->kernel)
         return;
     std::string key;
     if (!args.getString(LODB_F_TITLE, key))
         return;
     if (key == "session.max" || key == "session.idle") {
         AuthDal::SessionConfig cfg = {lobbsConfigGet(*ctx, "session.max"), lobbsConfigGet(*ctx, "session.idle")};
-        ctx->mod->auth().dal().applySessionConfig(cfg);
+        ctx->kernel->auth().dal().applySessionConfig(cfg);
     }
 }
 
@@ -393,11 +392,11 @@ static void filterAuthHelpForTopic(LoBBSCommandCtx *ctx, LoScalar &value, const 
 static void filterAuthStatusLines(LoBBSCommandCtx *ctx, std::vector<LoScalar> &lines, const LoScalar &args)
 {
     (void)args;
-    if (!ctx || !ctx->mod)
+    if (!ctx || !ctx->kernel)
         return;
     char title[32];
     char value[32];
-    uint32_t n = ctx->mod->auth().dal().countAllUsers();
+    uint32_t n = ctx->kernel->auth().dal().countAllUsers();
     snprintf(title, sizeof(title), "Users");
     snprintf(value, sizeof(value), "%u total", (unsigned)n);
     lobbsRecordPush(lines, title, value);
@@ -435,8 +434,8 @@ static void displayAuthHuman(LoBBSCommandCtx *ctx, LoScalar &value, const LoScal
 static void actionAuthSeed(LoBBSCommandCtx *ctx, const LoScalar &args)
 {
     (void)args;
-    if (ctx && ctx->mod)
-        lobbsSeedAuth(*ctx->mod);
+    if (ctx && ctx->kernel)
+        lobbsSeedAuth(*ctx->kernel);
 }
 #endif
 

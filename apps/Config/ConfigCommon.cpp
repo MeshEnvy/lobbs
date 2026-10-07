@@ -1,9 +1,9 @@
 #include "ConfigCommon.h"
-#include "../../LoBBSModule.h"
+#include "../../core/LoBBSKernel.h"
 #include "ConfigDal.h"
 #include <cstring>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 void lobbsConfigPushKey(std::vector<LoScalar> &keys, const char *key, uint32_t def, uint32_t min, uint32_t max, const char *help)
 {
@@ -21,8 +21,8 @@ void lobbsConfigPushKey(std::vector<LoScalar> &keys, const char *key, uint32_t d
 
 uint32_t lobbsConfigGet(LoBBSCommandCtx &ctx, const char *key)
 {
-    if (!ctx.mod || !key)
+    if (!ctx.kernel || !key)
         return 0;
-    return ctx.mod->config().dal().effectiveValue(ctx, key);
+    return ctx.kernel->config().dal().effectiveValue(ctx, key);
 }
 

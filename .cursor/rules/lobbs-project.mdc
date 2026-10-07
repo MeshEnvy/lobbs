@@ -11,7 +11,7 @@ Cross-platform, on-firmware BBS for **Meshtastic** and **MeshCore**. Greenfield:
 
 **Plugin owns everything, forks stay upstream.**
 
-1. **Plugin** (this repo, PlatformIO library): core, apps, LoScalar, LoDB, LoFS, protocol, and the platform providers under `platforms/<platform>/`. On MeshCore the plugin also owns the firmware app (`setup()`/`loop()`).
+1. **Plugin** (this repo, PlatformIO library): `core/` (kernel), apps, LoScalar, LoDB, LoFS, protocol, and platform providers under `platforms/` (`meshtastic`, `meshcore`, `native` for CI only). Product platforms are Meshtastic and MeshCore only. On MeshCore the plugin owns the BBS integration surface (`lobbsMeshCoreInit`, DM helpers); the fork wires example chat.
 2. **Firmware forks** (`../lobbs-meshtastic-firmware`, `../lobbs-meshcore-firmware`, both on `lobbs`): upstream plus a thin overlay that pins the plugin in `lib_deps`. The Meshtastic fork enables LoBBS on every env.
 
 The repos are siblings under `/Volumes/Code/repos/meshenvy/`. No submodules anywhere: PlatformIO clones git deps with `--recursive`, and MeshForge builds a fork repo alone.

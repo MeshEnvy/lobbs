@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <cstring>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 WallDal::WallDal(LoDb &lodb) : lodb_(lodb)
 {

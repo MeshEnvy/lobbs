@@ -1,9 +1,9 @@
 #include "WallCommands.h"
-#include "../../LoBBSCommandRegistry.h"
-#include "../../LoBBSHooks.h"
-#include "../../LoBBSModule.h"
-#include "../../LoBBSReply.h"
-#include "../../LoBBSResponse.h"
+#include "../../core/LoBBSCommandRegistry.h"
+#include "../../core/LoBBSHooks.h"
+#include "../../core/LoBBSKernel.h"
+#include "../../core/LoBBSReply.h"
+#include "../../core/LoBBSResponse.h"
 #include "../Config/ConfigCommon.h"
 #include "WallDal.h"
 #include <cstdio>
@@ -11,11 +11,11 @@
 #include <lodb/LoDB.h>
 #include <strings.h>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 static void replyGrid(LoBBSCommandCtx &ctx, bool markSeen)
 {
-    WallDal &wall = ctx.mod->wall().dal();
+    WallDal &wall = ctx.kernel->wall().dal();
     char buf[LOBBS_REPLY_BYTES + 1];
     if (!wall.formatGridLines(buf, sizeof(buf))) {
         lobbsCommandReplyError(ctx, "Canvas error.");
@@ -55,7 +55,7 @@ static void handleWall(LoBBSCommandCtx &ctx)
     const uint32_t period = lobbsConfigGet(ctx, "wall.period");
     const uint32_t cells = lobbsConfigGet(ctx, "wall.cells");
     if (const char *err =
-            ctx.mod->wall().dal().applyPaintTokens(lobbsCtxUserUuid(ctx), ctx.session.isSysop, toks, n, period, cells)) {
+            ctx.kernel->wall().dal().applyPaintTokens(lobbsCtxUserUuid(ctx), ctx.session.isSysop, toks, n, period, cells)) {
         lobbsCommandReplyError(ctx, err);
         return;
     }
@@ -84,9 +84,9 @@ static void filterWallHelpForTopic(LoBBSCommandCtx *ctx, LoScalar &value, const 
 static void filterWallStatusLines(LoBBSCommandCtx *ctx, std::vector<LoScalar> &lines, const LoScalar &args)
 {
     (void)args;
-    if (!ctx || !ctx->mod || !lobbsCtxLoggedIn(*ctx))
+    if (!ctx || !ctx->kernel || !lobbsCtxLoggedIn(*ctx))
         return;
-    bool dirty = ctx->mod->wall().dal().isDirtyForUser(lobbsCtxUserUuid(*ctx));
+    bool dirty = ctx->kernel->wall().dal().isDirtyForUser(lobbsCtxUserUuid(*ctx));
     lobbsRecordPush(lines, "Wall", dirty ? "new" : "seen");
 }
 
@@ -95,8 +95,8 @@ static void filterWallStatusLines(LoBBSCommandCtx *ctx, std::vector<LoScalar> &l
 static void actionWallSeed(LoBBSCommandCtx *ctx, const LoScalar &args)
 {
     (void)args;
-    if (ctx && ctx->mod)
-        lobbsSeedWall(*ctx->mod);
+    if (ctx && ctx->kernel)
+        lobbsSeedWall(*ctx->kernel);
 }
 #endif
 

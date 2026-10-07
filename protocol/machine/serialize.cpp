@@ -1,7 +1,7 @@
 #include "serialize.h"
 #include <cstddef>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 bool lobbsSerializeMachine(const LoBBSResponse &resp, std::string &out)
 {

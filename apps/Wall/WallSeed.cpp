@@ -1,17 +1,17 @@
-#include "../../LoBBSConfig.h"
+#include "../../core/LoBBSConfig.h"
 #if LOBBS_SEED
 
-#include "../../LoBBSModule.h"
+#include "../../core/LoBBSKernel.h"
 #include "../AppUtil.h"
 #include "WallDal.h"
 #include "WallSeed.h"
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
-void lobbsSeedWall(LoBBSModule &mod)
+void lobbsSeedWall(LoBBSKernel &kernel)
 {
-    WallDal &wall = mod.wall().dal();
-    uint64_t sysop = lobbsAppUuidForUsername(&mod, "sysop");
+    WallDal &wall = kernel.wall().dal();
+    uint64_t sysop = lobbsAppUuidForUsername(&kernel, "sysop");
     if (!sysop)
         return;
     const char *tokens[] = {"a1#", "a2#", "b2#", "c3x", "d4y"};

@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 Planned major release **2.0.0** (not tagged yet).
 
+### Changed
+
+- LoFS: volume provider layer (`LoFSVolume`, block devices, host mount tables). Mount names are now `sd`, `qspi`, `reserve`, `spare`, `internal` (replacing `extra`, `flash3`, `flash2`, `flash`). Every LittleFS mount is formattable via `/format`; SD stays refused.
+
 ### Added
 
 - Stateless slash CLI: `/[id] command args…`, replies optionally prefixed `<id>`. No menu stack. The last successful reply is cached for `/pN` paging.

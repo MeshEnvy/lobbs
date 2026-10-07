@@ -4,7 +4,7 @@
 #include <loscalar/LoScalar.h>
 #include <loutil/LoUtil.h>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 static constexpr uint32_t kLoScalarFieldMax = 99;
 

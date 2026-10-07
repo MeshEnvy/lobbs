@@ -1,42 +1,35 @@
-#include <Arduino.h>
 #include <lodb/LoDB.h>
-#if __has_include("configuration.h")
-#include "configuration.h"
-#include "gps/RTC.h"
+#include "platforms/LoPlatform.h"
+
 #undef LODB_LOG_DEBUG
-#define LODB_LOG_DEBUG(...) LOG_DEBUG(__VA_ARGS__)
+#define LODB_LOG_DEBUG(...) LOBBS_LOG_DEBUG(__VA_ARGS__)
 #undef LODB_LOG_INFO
-#define LODB_LOG_INFO(...) LOG_INFO(__VA_ARGS__)
+#define LODB_LOG_INFO(...) LOBBS_LOG_INFO(__VA_ARGS__)
 #undef LODB_LOG_WARN
-#define LODB_LOG_WARN(...) LOG_WARN(__VA_ARGS__)
+#define LODB_LOG_WARN(...) LOBBS_LOG_WARN(__VA_ARGS__)
 #undef LODB_LOG_ERROR
-#define LODB_LOG_ERROR(...) LOG_ERROR(__VA_ARGS__)
-#endif
+#define LODB_LOG_ERROR(...) LOBBS_LOG_ERROR(__VA_ARGS__)
 #include <SHA256.h>
 #include <algorithm>
 #include <cstring>
 #include <memory>
 #include <new>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 static_assert(LODB_FILE_IO_BUFFER_SIZE <= LODB_MAX_RECORD_FILE_BYTES,
               "encode buffer cannot exceed max on-disk record (get would reject writes)");
 
 static constexpr size_t LODB_RECORD_PATH_BYTES = 192;
 
-__attribute__((weak)) uint32_t lodb_now_ms(void)
+uint32_t lodb_now_ms(void)
 {
-    return static_cast<uint32_t>(millis());
+    return lobbsPlatformMillis();
 }
 
-__attribute__((weak)) uint32_t lodb_now_unix(void)
+uint32_t lodb_now_unix(void)
 {
-#if __has_include("configuration.h")
-    return getTime();
-#else
-    return 0;
-#endif
+    return lobbsPlatformUnixNow();
 }
 
 static void lodbStampInsert(lodb_uuid_t uuid, LoScalar &record)
@@ -80,7 +73,7 @@ lodb_uuid_t lodb_new_uuid(const char *str, uint64_t salt)
 
     if (str == nullptr) {
         uint32_t timestamp = lodb_now_ms();
-        uint32_t random_val = (uint32_t)random(0x7fffffff) ^ ((uint32_t)random(0x7fffffff) << 1);
+        uint32_t random_val = lobbsPlatformRandom(0x7fffffff) ^ (lobbsPlatformRandom(0x7fffffff) << 1);
         snprintf(generated_str, sizeof(generated_str), "%u:%u", timestamp, random_val);
         input_str = generated_str;
     }
@@ -159,7 +152,7 @@ LoDb::~LoDb() {}
 /** Calls fn for each `<16 hex>.ls` record in `dir_path`. False when the path is not a directory. */
 static bool lodbForEachRecord(const char *dir_path, const std::function<void(lodb_uuid_t)> &fn)
 {
-    File dir = LoFS::open(dir_path, FILE_O_READ);
+    LoFile dir = LoFS::open(dir_path, "r");
     if (!dir) {
         LODB_LOG_DEBUG("Table directory not found: %s", dir_path);
         return true;
@@ -170,7 +163,7 @@ static bool lodbForEachRecord(const char *dir_path, const std::function<void(lod
         return false;
     }
     while (true) {
-        File file = dir.openNextFile();
+        LoFile file = dir.openNextFile();
         if (!file)
             break;
         bool isDir = file.isDirectory();
@@ -255,7 +248,7 @@ static LoDbError writeRecordFile(const char *file_path, const LoScalar &record)
         return LODB_ERR_FULL;
     }
 
-    auto file = LoFS::open(tmp_path, FILE_O_WRITE);
+    auto file = LoFS::open(tmp_path, "w");
     if (!file) {
         LODB_LOG_ERROR("Failed to open file for writing: %s", tmp_path);
         return LODB_ERR_IO;
@@ -299,7 +292,7 @@ LoDbError LoDb::insert(const char *table_name, lodb_uuid_t uuid, const LoScalar 
         return LODB_ERR_INVALID;
 
     {
-        auto existing = LoFS::open(file_path, FILE_O_READ);
+        auto existing = LoFS::open(file_path, "r");
         if (existing) {
             size_t existingSize = existing.size();
             existing.close();
@@ -330,7 +323,7 @@ LoDbError LoDb::get(const char *table_name, lodb_uuid_t uuid, LoScalar &record_o
     if (!recordPath(table_name, uuid, file_path, sizeof(file_path)))
         return LODB_ERR_INVALID;
 
-    auto file = LoFS::open(file_path, FILE_O_READ);
+    auto file = LoFS::open(file_path, "r");
     if (!file) {
         LODB_LOG_DEBUG("Record not found: " LODB_UUID_FMT, LODB_UUID_ARGS(uuid));
         return LODB_ERR_NOT_FOUND;

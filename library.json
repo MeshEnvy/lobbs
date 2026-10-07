@@ -20,10 +20,12 @@
       "-<docs/**>",
       "-<bin/**>",
       "-<tests/**>",
+      "-<ci/**>",
+      "-<.pio/**>",
       "-<.cursor/**>",
       "-<logo.*>",
       "-<social.*>"
     ],
-    "extraScript": "platforms/meshtastic/extra_script.py"
+    "extraScript": "platforms/extra_script.py"
   }
 }

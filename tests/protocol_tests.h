@@ -1,6 +1,6 @@
 #pragma once
-#include "LoBBSReply.h"
-#include "LoBBSResponse.h"
+#include "core/LoBBSReply.h"
+#include "core/LoBBSResponse.h"
 #include "protocol/machine/paginate.h"
 #include "protocol/machine/serialize.h"
 #include "protocol/plain_text/paginate.h"

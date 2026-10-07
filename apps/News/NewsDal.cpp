@@ -1,12 +1,11 @@
 #include "NewsDal.h"
-#include "../../LoBBSConfig.h"
+#include "../../core/LoBBSConfig.h"
 #include "NewsRecords.h"
-#include "configuration.h"
-#include "gps/RTC.h"
+#include "platforms/LoPlatform.h"
 #include <algorithm>
 #include <cstring>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 NewsDal::NewsDal(LoDb &lodb) : lodb_(lodb)
 {
@@ -58,7 +57,7 @@ static constexpr uint32_t LOBBS_MAX_LIST_ROWS = 256;
 
 LoDbError NewsDal::postNews(uint64_t authorUserUuid, const char *message)
 {
-    lodb_uuid_t newsUuidVal = lodb_new_uuid(nullptr, authorUserUuid ^ (uint64_t)getTime());
+    lodb_uuid_t newsUuidVal = lodb_new_uuid(nullptr, authorUserUuid ^ (uint64_t)lobbsPlatformUnixNow());
 
     LoScalar news;
     char msgBuf[LOBBS_MESSAGE_BODY_BUFFER_SIZE];

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-class LoBBSModule;
+class LoBBSKernel;
 struct LoBBSCommandCtx;
 
 class ConfigDal
@@ -21,7 +21,7 @@ class ConfigDal
     uint32_t effectiveValue(LoBBSCommandCtx &ctx, const char *key);
     const char *validateAndSet(LoBBSCommandCtx &ctx, const char *key, uint32_t value);
     const char *resetKey(LoBBSCommandCtx &ctx, const char *key);
-    void notifyDatabaseOpened(LoBBSModule &mod);
+    void notifyDatabaseOpened(LoBBSKernel &kernel);
 
   private:
     lodb_uuid_t rowUuid(const char *key) const;

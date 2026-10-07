@@ -1,13 +1,13 @@
 #include "ConfigDal.h"
-#include "../../LoBBSCommandCtx.h"
-#include "../../LoBBSHooks.h"
-#include "../../LoBBSModule.h"
+#include "../../core/LoBBSCommandCtx.h"
+#include "../../core/LoBBSHooks.h"
+#include "../../core/LoBBSKernel.h"
 #include "../AppUtil.h"
 #include "ConfigRecords.h"
 #include <cstdio>
 #include <cstring>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 ConfigDal::ConfigDal(LoDb &lodb) : lodb_(lodb)
 {
@@ -138,12 +138,12 @@ const char *ConfigDal::resetKey(LoBBSCommandCtx &ctx, const char *key)
     return nullptr;
 }
 
-void ConfigDal::notifyDatabaseOpened(LoBBSModule &mod)
+void ConfigDal::notifyDatabaseOpened(LoBBSKernel &kernel)
 {
     resetCache();
     reloadOverrides();
     LoBBSCommandCtx ctx;
-    ctx.mod = &mod;
+    ctx.kernel = &kernel;
     ensureRegistry(ctx);
     for (const LoScalar &rec : registry_) {
         std::string key;

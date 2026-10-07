@@ -1,7 +1,7 @@
 #pragma once
 #if LOBBS_SEED
 
-class LoBBSModule;
-void lobbsSeedNews(LoBBSModule &mod);
+class LoBBSKernel;
+void lobbsSeedNews(LoBBSKernel &kernel);
 
 #endif

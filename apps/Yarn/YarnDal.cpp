@@ -5,7 +5,7 @@
 #include <cstring>
 #include <string>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 YarnDal::YarnDal(LoDb &lodb) : lodb_(lodb)
 {

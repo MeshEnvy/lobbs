@@ -1,13 +1,13 @@
 #include "MsgCommon.h"
-#include "../../LoBBSCommandRegistry.h"
-#include "../../LoBBSHooks.h"
-#include "../../LoBBSResponse.h"
+#include "../../core/LoBBSCommandRegistry.h"
+#include "../../core/LoBBSHooks.h"
+#include "../../core/LoBBSResponse.h"
 #include "../Mail/MailRecords.h"
 #include "../News/NewsRecords.h"
 #include <lodb/LoDB.h>
 #include <string>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 bool lobbsMsgShiftIndex(LoBBSCommandCtx &ctx, size_t count, const char *usage, const char *badNumMsg, uint32_t &idxOut)
 {

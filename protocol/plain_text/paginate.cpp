@@ -1,10 +1,11 @@
 #include "paginate.h"
-#include "LoBBSReply.h"
+#include "core/LoBBSReply.h"
+#include "platforms/LoPlatform.h"
 #include <cstdio>
 #include <cstring>
 #include <vector>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 static constexpr size_t LOBBS_PAGER_FOOTER_MAX = 16;
 static constexpr int LOBBS_PAGER_MAX_PAGES = 64;
@@ -95,14 +96,15 @@ bool lobbsPaginatePlainText(const std::string &text, uint32_t page1, std::string
     uint32_t pageStarts[LOBBS_PAGER_MAX_PAGES + 1];
     memset(pageStarts, 0, sizeof(pageStarts));
     int pageCount = 0;
-    lobbsHumanPackPages(lines, LOBBS_REPLY_BYTES, true, pageStarts, pageCount);
+    const size_t pageBytes = lobbsPlatformMaxReplyBytes();
+    lobbsHumanPackPages(lines, pageBytes, true, pageStarts, pageCount);
     if (pageCount <= 0) {
         if (errMsg)
             *errMsg = "Empty.";
         return false;
     }
     if (pageCount == 1) {
-        lobbsHumanPackPages(lines, LOBBS_REPLY_BYTES, false, pageStarts, pageCount);
+        lobbsHumanPackPages(lines, pageBytes, false, pageStarts, pageCount);
         pageStarts[1] = (uint32_t)lines.size();
     }
     if (page1 > (uint32_t)pageCount) {
@@ -114,7 +116,7 @@ bool lobbsPaginatePlainText(const std::string &text, uint32_t page1, std::string
     uint32_t from = pageStarts[page1 - 1];
     uint32_t to = pageStarts[page1];
     size_t footerReserve = pageCount > 1 ? LOBBS_PAGER_FOOTER_MAX : 0;
-    size_t maxLine = LOBBS_REPLY_BYTES > footerReserve ? LOBBS_REPLY_BYTES - footerReserve : 0;
+    size_t maxLine = pageBytes > footerReserve ? pageBytes - footerReserve : 0;
     for (uint32_t i = from; i < to; i++) {
         if (i > from)
             pageOut.push_back('\n');

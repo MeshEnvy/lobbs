@@ -1,241 +1,90 @@
-#include "../LoBBSBootTrace.h"
-#include "SPILock.h"
-#include "configuration.h"
-#include <lofs/LoFS.h>
-#include <stdlib.h>
-#include <string.h>
+#include "LoFS.h"
+#include "volumes/LoFSVolume.h"
+#include <cstring>
+#include <stdio.h>
 #include <string>
 
-#if LOBBS_EXTRA_QSPI
-#if !defined(NRF52840_XXAA) || !defined(PIN_QSPI_SCK)
-#error LOBBS_EXTRA_QSPI requires NRF52840_XXAA and PIN_QSPI_SCK
-#endif
-#include "LoFSQspi.h"
-#endif
+#include "core/LoBBSStackGuard.h"
 
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-#include <SD.h>
-#include <SPI.h>
-
-#ifdef SDCARD_USE_SPI1
-extern SPIClass SPI_HSPI;
-#define SDHandler SPI_HSPI
-#else
-#define SDHandler SPI
-#endif
-
-#ifndef SD_SPI_FREQUENCY
-#define SD_SPI_FREQUENCY 4000000U
-#endif
-#endif
-
-#if defined(ARCH_NRF52)
-#include "flash/flash_nrf5x.h"
-
-/** Second internal-flash partition bounds from the nRF52840 linker scripts. Weak: other nRF linker scripts get no `/flash2`. */
-extern "C" uint8_t __flash2_start[] __attribute__((weak));
-extern "C" uint8_t __flash2_end[] __attribute__((weak));
-
-static constexpr uint32_t LOFS_FLASH2_BLOCK = 128;
-
-// The flash_nrf5x page cache is shared with InternalFS (which the BLE task also writes), so /flash2 block IO holds its lock.
-static int lofsFlash2Read(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, void *buffer, lfs_size_t size)
-{
-    InternalFS._lockFS();
-    int n = flash_nrf5x_read(buffer, (uint32_t)c->context + block * LOFS_FLASH2_BLOCK + off, size);
-    InternalFS._unlockFS();
-    return n > 0 ? 0 : -1;
-}
-
-static int lofsFlash2Prog(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, const void *buffer, lfs_size_t size)
-{
-    InternalFS._lockFS();
-    int n = flash_nrf5x_write((uint32_t)c->context + block * LOFS_FLASH2_BLOCK + off, buffer, size);
-    InternalFS._unlockFS();
-    return n > 0 ? 0 : -1;
-}
-
-static int lofsFlash2Erase(const struct lfs_config *c, lfs_block_t block)
-{
-    uint8_t ff[LOFS_FLASH2_BLOCK];
-    memset(ff, 0xFF, sizeof(ff));
-    InternalFS._lockFS();
-    int n = flash_nrf5x_write((uint32_t)c->context + block * LOFS_FLASH2_BLOCK, ff, sizeof(ff));
-    InternalFS._unlockFS();
-    return n > 0 ? 0 : -1;
-}
-
-static int lofsFlash2Sync(const struct lfs_config *c)
-{
-    (void)c;
-    InternalFS._lockFS();
-    flash_nrf5x_flush();
-    InternalFS._unlockFS();
-    return 0;
-}
-
-static struct lfs_config lofsFlash2Cfg;
-static Adafruit_LittleFS lofsFlash2(&lofsFlash2Cfg);
-
-static bool lofsFlash2Format()
-{
-    const uint32_t start = (uint32_t)lofsFlash2Cfg.context;
-    const uint32_t end = start + lofsFlash2Cfg.block_count * LOFS_FLASH2_BLOCK;
-    LOG_WARN("LoFS: formatting /flash2 (0x%x-0x%x)", (unsigned)start, (unsigned)end);
-    LOBBS_BOOT_STEP("flash2: erase partition pages");
-    InternalFS._lockFS();
-    flash_nrf5x_flush();
-    for (uint32_t addr = start; addr < end; addr += FLASH_NRF52_PAGE_SIZE)
-        flash_nrf5x_erase(addr);
-    InternalFS._unlockFS();
-    LOBBS_BOOT_STEP("flash2: lfs format");
-    return lofsFlash2.format() && lofsFlash2.begin();
-}
-
-static bool lofsFlash2Begin()
-{
-    LOBBS_BOOT_STEP("flash2: begin enter");
-    const uint32_t start = (uint32_t)__flash2_start;
-    const uint32_t end = (uint32_t)__flash2_end;
-    if (!start || end <= start)
-        return false;
-    lofsFlash2Cfg.context = (void *)start;
-    lofsFlash2Cfg.read = lofsFlash2Read;
-    lofsFlash2Cfg.prog = lofsFlash2Prog;
-    lofsFlash2Cfg.erase = lofsFlash2Erase;
-    lofsFlash2Cfg.sync = lofsFlash2Sync;
-    lofsFlash2Cfg.read_size = LOFS_FLASH2_BLOCK;
-    lofsFlash2Cfg.prog_size = LOFS_FLASH2_BLOCK;
-    lofsFlash2Cfg.block_size = LOFS_FLASH2_BLOCK;
-    lofsFlash2Cfg.block_count = (end - start) / LOFS_FLASH2_BLOCK;
-    lofsFlash2Cfg.lookahead = 128;
-    LOBBS_BOOT_STEP("flash2: lfs mount");
-    if (lofsFlash2.begin())
-        return true;
-    return lofsFlash2Format();
-}
-
-#if LOBBS_EXTRA_QSPI
-static struct lfs_config lofsQspiCfg;
-static Adafruit_LittleFS lofsQspi(&lofsQspiCfg);
-
-static bool lofsQspiFormat()
-{
-    LOG_WARN("LoFS: formatting /extra (QSPI)");
-    LOBBS_BOOT_STEP("extra: lfs format");
-    return lofsQspi.format() && lofsQspi.begin();
-}
-
-static bool lofsQspiBegin()
-{
-    LOBBS_BOOT_STEP("extra: begin enter");
-    LOBBS_BOOT_STEP("extra: qspi config");
-    if (!lofsQspiConfig(lofsQspiCfg))
-        return false;
-    LOBBS_BOOT_STEP("extra: lfs mount");
-    if (lofsQspi.begin())
-        return true;
-    return lofsQspiFormat();
-}
-#endif
-
-static Adafruit_LittleFS &lofsFs(LoFS::Backend b)
-{
-    if (b == LoFS::Backend::Flash2)
-        return lofsFlash2;
-#if LOBBS_EXTRA_QSPI
-    if (b == LoFS::Backend::Extra)
-        return lofsQspi;
-#endif
-    return FSCom;
-}
-#else
-static auto &lofsFs(bool flash2)
-{
-    (void)flash2;
-    return FSCom;
-}
-#endif
-
-#include "../apps/AppUtil.h"
-#include "LoBBSStackGuard.h"
-#include <stdio.h>
-
-LoFS::Mount LoFS::mounts[4];
+LoFS::Mount LoFS::mounts[6];
 int LoFS::mountCount = 0;
 bool LoFS::begun = false;
 
-static bool lobfsSdPresent()
+static uint32_t lofsCrc32Update(uint32_t crc, const uint8_t *data, size_t len)
 {
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-    uint8_t cardType = SD.cardType();
-    if (cardType == CARD_NONE) {
-        concurrency::LockGuard g(spiLock);
-        SDHandler.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
-        if (SD.begin(SDCARD_CS, SDHandler, SD_SPI_FREQUENCY))
-            cardType = SD.cardType();
+    for (size_t i = 0; data && i < len; i++) {
+        crc ^= data[i];
+        for (int b = 0; b < 8; b++)
+            crc = (crc >> 1) ^ (0xedb88320 & (~((crc & 1) - 1)));
     }
-    return cardType != CARD_NONE;
-#else
-    return false;
-#endif
+    return crc;
 }
 
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-#if defined(ARCH_ESP32) || defined(ARCH_RP2040) || defined(ARCH_PORTDUINO)
-static const char *convertToSDMode(const char *modeStr)
+static int lofsMountPreferenceRank(const char *name)
 {
-    return modeStr;
+    if (!name)
+        return 999;
+    for (int i = 0; i < LOFS_MOUNT_ORDER_LEN; i++) {
+        if (strcmp(name, LOFS_MOUNT_ORDER[i]) == 0)
+            return i;
+    }
+    return 999;
 }
-static const char *convertToSDMode(uint8_t mode)
+
+int LoFS::mountPreferenceRank(const char *name)
 {
-    return (mode == 0) ? "r" : "w";
+    return lofsMountPreferenceRank(name);
 }
-#else
-static uint8_t convertToSDMode(const char *modeStr)
-{
-    return (strcmp(modeStr, "r") == 0) ? FILE_READ : FILE_WRITE;
-}
-static uint8_t convertToSDMode(uint8_t mode)
-{
-    return (mode == 0) ? FILE_READ : FILE_WRITE;
-}
-#endif
-#endif
 
 void LoFS::begin()
 {
     if (begun)
         return;
     mountCount = 0;
-    bool hasFlash2 = false;
 
-    // Registration order is install preference order.
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-    LOBBS_BOOT_STEP("LoFS: sd present check");
-    if (lobfsSdPresent())
-        mounts[mountCount++] = Mount{"sd", Backend::Sd, true, false, true};
-#endif
+    LoFSMountTable table;
+    lofsPlatformMounts(table);
 
-#if LOBBS_EXTRA_QSPI
-    LOBBS_BOOT_STEP("LoFS: lofsQspiBegin");
-    if (lofsQspiBegin())
-        mounts[mountCount++] = Mount{"extra", Backend::Extra, true, false, true};
-#endif
-
-#if defined(ARCH_NRF52)
-    LOBBS_BOOT_STEP("LoFS: lofsFlash2Begin");
-    if (lofsFlash2Begin()) {
-        mounts[mountCount++] = Mount{"flash2", Backend::Flash2, true, false, true};
-        hasFlash2 = true;
+    for (int o = 0; o < LOFS_MOUNT_ORDER_LEN && mountCount < LOFS_MAX_MOUNTS; o++) {
+        const char *want = LOFS_MOUNT_ORDER[o];
+        for (int i = 0; i < table.count; i++) {
+            if (strcmp(table.specs[i].name, want) != 0)
+                continue;
+            LoFSMountSpec &spec = table.specs[i];
+            if (!spec.volume || !spec.volume->begin())
+                break;
+            mounts[mountCount++] = {spec.name, spec.volume, true, spec.shared, false, spec.formattable};
+            break;
+        }
     }
-#endif
 
-    LOBBS_BOOT_STEP("LoFS: register flash mount");
-    mounts[mountCount++] = Mount{"flash", Backend::Flash, true, true, !hasFlash2};
+    for (int i = 0; i < mountCount; i++) {
+        if (!mounts[i].shared) {
+            mounts[i].dbSafe = true;
+            continue;
+        }
+        mounts[i].dbSafe = true;
+        const int selfRank = lofsMountPreferenceRank(mounts[i].name);
+        for (int j = 0; j < mountCount; j++) {
+            if (j == i || !mounts[j].present)
+                continue;
+            if (lofsMountPreferenceRank(mounts[j].name) < selfRank) {
+                mounts[i].dbSafe = false;
+                break;
+            }
+        }
+    }
+
     begun = true;
-    LOBBS_BOOT_STEP("LoFS: begin done");
 }
+
+#ifdef PIO_UNIT_TESTING
+void LoFS::resetForTests()
+{
+    begun = false;
+    mountCount = 0;
+}
+#endif
 
 LoFS::Mount *LoFS::findByName(const char *name, size_t len)
 {
@@ -260,23 +109,9 @@ bool LoFS::mountDbSafe(const char *name)
 bool LoFS::format(const char *name)
 {
     Mount *m = name ? findByName(name, strlen(name)) : nullptr;
-    if (!m)
+    if (!m || !m->formattable || !m->volume)
         return false;
-#if defined(ARCH_NRF52)
-    if (m->backend == Backend::Flash2)
-        return lofsFlash2Format();
-#endif
-#if LOBBS_EXTRA_QSPI
-    if (m->backend == Backend::Extra)
-        return lofsQspiFormat();
-#endif
-#if defined(ARCH_NRF52) || defined(ARCH_ESP32) || defined(ARCH_RP2040)
-    if (m->backend == Backend::Flash) {
-        concurrency::LockGuard g(spiLock);
-        return FSCom.format();
-    }
-#endif
-    return false;
+    return m->volume->format();
 }
 
 void LoFS::eachPresentMount(void (*fn)(void *ctx, const char *name), void *ctx)
@@ -310,7 +145,7 @@ bool LoFS::resolve(const char *filepath, Resolved &out)
     if (!m)
         return false;
 
-    out.backend = m->backend;
+    out.volume = m->volume;
     if (!slash || slash[1] == '\0') {
         out.kind = PathKind::MountRoot;
         out.rel = "/";
@@ -324,7 +159,7 @@ bool LoFS::resolve(const char *filepath, Resolved &out)
 
 const char *LoFS::backendPath(const Resolved &r)
 {
-    return r.backend == Backend::Sd ? r.rel + 1 : r.rel;
+    return r.rel;
 }
 
 bool LoFS::isMountPoint(const char *path)
@@ -359,32 +194,7 @@ bool LoFS::isDirectory(const char *path)
         return false;
     if (r.kind == PathKind::VirtualRoot || r.kind == PathKind::MountRoot)
         return true;
-
-    const char *bp = backendPath(r);
-
-    concurrency::LockGuard g(spiLock);
-#if defined(ARCH_ESP32) || defined(ARCH_RP2040) || defined(ARCH_PORTDUINO)
-    File f;
-#else
-    File f(FSCom);
-#endif
-#if defined(ARCH_ESP32) || defined(ARCH_RP2040) || defined(ARCH_PORTDUINO)
-    if (r.backend == Backend::Sd) {
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-        f = SD.open(bp, FILE_O_READ);
-#endif
-    } else {
-        f = lofsFs(r.backend == Backend::Flash2).open(bp, FILE_O_READ);
-    }
-#else
-    if (r.backend == Backend::Sd) {
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-        f = SD.open(bp, FILE_O_READ);
-#endif
-    } else {
-        f = lofsFs(r.backend).open(bp, FILE_O_READ);
-    }
-#endif
+    LoFile f = open(path, "r");
     if (!f)
         return false;
     bool isDir = f.isDirectory();
@@ -397,58 +207,20 @@ bool LoFS::refuseMountPointMutation(const char *filepath)
     return isMountPoint(filepath);
 }
 
-File LoFS::open(const char *filepath, uint8_t mode)
+LoFile LoFS::open(const char *filepath, uint8_t mode)
 {
-#if defined(ARCH_ESP32) || defined(ARCH_RP2040) || defined(ARCH_PORTDUINO)
-    const char *modeStr = (mode == 0) ? FILE_O_READ : FILE_O_WRITE;
-    return open(filepath, modeStr);
-#else
     Resolved r;
-    if (!resolve(filepath, r) || r.kind == PathKind::VirtualRoot) {
-        return File(FSCom);
-    }
-
-    const char *bp = backendPath(r);
-
-    concurrency::LockGuard g(spiLock);
-    if (r.backend == Backend::Sd) {
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-        return SD.open(bp, convertToSDMode(mode));
-#endif
-    }
-    return lofsFs(r.backend).open(bp, mode);
-#endif
+    if (!resolve(filepath, r) || r.kind == PathKind::VirtualRoot || !r.volume)
+        return LoFile();
+    return r.volume->open(backendPath(r), mode);
 }
 
-File LoFS::open(const char *filepath, const char *mode)
+LoFile LoFS::open(const char *filepath, const char *mode)
 {
     Resolved r;
-    if (!resolve(filepath, r) || r.kind == PathKind::VirtualRoot) {
-#if defined(ARCH_ESP32) || defined(ARCH_RP2040) || defined(ARCH_PORTDUINO)
-        return File();
-#else
-        return File(FSCom);
-#endif
-    }
-
-    const char *bp = backendPath(r);
-
-    concurrency::LockGuard g(spiLock);
-    if (r.backend == Backend::Sd) {
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-#if defined(ARCH_ESP32) || defined(ARCH_RP2040) || defined(ARCH_PORTDUINO)
-        return SD.open(bp, mode);
-#else
-        return SD.open(bp, convertToSDMode(mode));
-#endif
-#endif
-    }
-#if defined(ARCH_ESP32) || defined(ARCH_RP2040) || defined(ARCH_PORTDUINO)
-    return lofsFs(r.backend == Backend::Flash2).open(bp, mode);
-#else
-    uint8_t flashMode = (mode && strcmp(mode, "r") == 0) ? 0 : 1;
-    return lofsFs(r.backend).open(bp, flashMode);
-#endif
+    if (!resolve(filepath, r) || r.kind == PathKind::VirtualRoot || !r.volume)
+        return LoFile();
+    return r.volume->open(backendPath(r), mode);
 }
 
 bool LoFS::exists(const char *filepath)
@@ -460,103 +232,48 @@ bool LoFS::exists(const char *filepath)
         return true;
     if (r.kind == PathKind::MountRoot)
         return true;
-
-    const char *bp = backendPath(r);
-    concurrency::LockGuard g(spiLock);
-    if (r.backend == Backend::Sd) {
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-        return SD.exists(bp);
-#endif
-    }
-#if defined(ARCH_NRF52)
-    return lofsFs(r.backend).exists(bp);
-#else
-    return lofsFs(r.backend == Backend::Flash2).exists(bp);
-#endif
+    return r.volume && r.volume->exists(backendPath(r));
 }
 
 bool LoFS::mkdir(const char *filepath)
 {
     if (refuseMountPointMutation(filepath))
         return false;
-
     Resolved r;
-    if (!resolve(filepath, r) || r.kind == PathKind::VirtualRoot)
+    if (!resolve(filepath, r) || r.kind == PathKind::VirtualRoot || !r.volume)
         return false;
-
-    const char *bp = backendPath(r);
-
-    concurrency::LockGuard g(spiLock);
-    if (r.backend == Backend::Sd) {
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-        return SD.mkdir(bp);
-#endif
-    }
-#if defined(ARCH_NRF52)
-    return lofsFs(r.backend).mkdir(bp);
-#else
-    return lofsFs(r.backend == Backend::Flash2).mkdir(bp);
-#endif
+    return r.volume->mkdir(backendPath(r));
 }
 
 bool LoFS::remove(const char *filepath)
 {
     if (refuseMountPointMutation(filepath))
         return false;
-
     Resolved r;
-    if (!resolve(filepath, r) || r.kind == PathKind::VirtualRoot || r.kind == PathKind::MountRoot)
+    if (!resolve(filepath, r) || r.kind == PathKind::VirtualRoot || r.kind == PathKind::MountRoot || !r.volume)
         return false;
-
-    const char *bp = backendPath(r);
-
-    concurrency::LockGuard g(spiLock);
-    if (r.backend == Backend::Sd) {
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-        return SD.remove(bp);
-#endif
-    }
-#if defined(ARCH_NRF52)
-    return lofsFs(r.backend).remove(bp);
-#else
-    return lofsFs(r.backend == Backend::Flash2).remove(bp);
-#endif
+    return r.volume->remove(backendPath(r));
 }
 
 bool LoFS::rename(const char *oldfilepath, const char *newfilepath)
 {
     if (refuseMountPointMutation(oldfilepath) || refuseMountPointMutation(newfilepath))
         return false;
-
     Resolved oldR;
     Resolved newR;
-    if (!resolve(oldfilepath, oldR) || !resolve(newfilepath, newR))
+    if (!resolve(oldfilepath, oldR) || !resolve(newfilepath, newR) || !oldR.volume || !newR.volume)
         return false;
     if (oldR.kind == PathKind::VirtualRoot || newR.kind == PathKind::VirtualRoot)
         return false;
-    if (oldR.backend != newR.backend)
+    if (oldR.volume != newR.volume)
         return false;
-
-    const char *oldBp = backendPath(oldR);
-    const char *newBp = backendPath(newR);
-
-    concurrency::LockGuard g(spiLock);
-    if (oldR.backend == Backend::Sd) {
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-        return SD.rename(oldBp, newBp);
-#endif
-    }
-#if defined(ARCH_NRF52)
-    return lofsFs(oldR.backend).rename(oldBp, newBp);
-#else
-    return lofsFs(oldR.backend == Backend::Flash2).rename(oldBp, newBp);
-#endif
+    return oldR.volume->rename(backendPath(oldR), backendPath(newR));
 }
 
-static bool lobfsEachDirEntry(File &dir, void *ctx, LoFS::ListCallback fn)
+static bool lobfsEachDirEntry(LoFile &dir, void *ctx, LoFS::ListCallback fn)
 {
     while (true) {
-        File file = dir.openNextFile();
+        LoFile file = dir.openNextFile();
         if (!file)
             break;
 
@@ -596,7 +313,7 @@ bool LoFS::list(const char *dirpath, void *ctx, ListCallback fn)
         return true;
     }
 
-    File dir = open(dirpath, FILE_O_READ);
+    LoFile dir = open(dirpath, "r");
     if (!dir)
         return false;
     if (!dir.isDirectory()) {
@@ -625,7 +342,7 @@ bool LoFS::stat(const char *filepath, uint32_t *sizeOut, bool *isDirOut)
         return true;
     }
 
-    File f = open(filepath, FILE_O_READ);
+    LoFile f = open(filepath, "r");
     if (!f)
         return false;
     if (isDirOut)
@@ -648,12 +365,12 @@ bool LoFS::writeAt(const char *filepath, uint32_t offset, const uint8_t *data, s
         return false;
 
     const bool creating = !exists(filepath);
-#if defined(ARCH_ESP32) || defined(ARCH_RP2040) || defined(ARCH_PORTDUINO)
-    File f = open(filepath, creating ? "w" : "r+");
-#else
-    (void)creating;
-    File f = open(filepath, (uint8_t)1);
-#endif
+    bool appendAtEnd = false;
+    LoFile f = open(filepath, creating ? "w" : "r+");
+    if (!f && !creating && offset > 0) {
+        f = open(filepath, "a");
+        appendAtEnd = true;
+    }
     if (!f)
         return false;
     if (f.isDirectory()) {
@@ -662,15 +379,14 @@ bool LoFS::writeAt(const char *filepath, uint32_t offset, const uint8_t *data, s
     }
 
     bool ok = false;
-    {
-        concurrency::LockGuard g(spiLock);
-        if (f.seek(offset)) {
-            size_t w = f.write(data, len);
-            ok = (w == len);
-        }
-        f.flush();
+    if (!appendAtEnd && offset > 0 && !f.seek(offset)) {
         f.close();
+        return false;
     }
+    size_t w = f.write(data, len);
+    ok = (w == len);
+    f.flush();
+    f.close();
     return ok;
 }
 
@@ -690,7 +406,7 @@ bool LoFS::copy(const char *src, const char *dst)
     if (dstR.kind == PathKind::VirtualRoot || dstR.kind == PathKind::MountRoot)
         return false;
 
-    File srcFile = open(src, FILE_O_READ);
+    LoFile srcFile = open(src, "r");
     if (!srcFile)
         return false;
     if (srcFile.isDirectory()) {
@@ -698,7 +414,7 @@ bool LoFS::copy(const char *src, const char *dst)
         return false;
     }
 
-    File dstFile = open(dst, FILE_O_WRITE);
+    LoFile dstFile = open(dst, "w");
     if (!dstFile) {
         srcFile.close();
         return false;
@@ -707,30 +423,19 @@ bool LoFS::copy(const char *src, const char *dst)
     unsigned char buffer[128];
     bool ok = true;
     while (true) {
-        size_t n = 0;
-        {
-            concurrency::LockGuard g(spiLock);
-            n = srcFile.read(buffer, sizeof(buffer));
-        }
+        size_t n = srcFile.read(buffer, sizeof(buffer));
         if (n == 0)
             break;
-        size_t w = 0;
-        {
-            concurrency::LockGuard g(spiLock);
-            w = dstFile.write(buffer, n);
-        }
+        size_t w = dstFile.write(buffer, n);
         if (w != n) {
             ok = false;
             break;
         }
     }
 
-    {
-        concurrency::LockGuard g(spiLock);
-        dstFile.flush();
-        dstFile.close();
-        srcFile.close();
-    }
+    dstFile.flush();
+    dstFile.close();
+    srcFile.close();
 
     if (!ok)
         remove(dst);
@@ -773,7 +478,7 @@ bool LoFS::crc32File(const char *filepath, uint32_t *crcOut)
 {
     if (!filepath || !crcOut)
         return false;
-    File f = open(filepath, FILE_O_READ);
+    LoFile f = open(filepath, "r");
     if (!f)
         return false;
     if (f.isDirectory()) {
@@ -786,7 +491,7 @@ bool LoFS::crc32File(const char *filepath, uint32_t *crcOut)
         size_t n = f.read(chunk, sizeof(chunk));
         if (n == 0)
             break;
-        crc = lobbsCrc32Update(crc, chunk, n);
+        crc = lofsCrc32Update(crc, chunk, n);
     }
     f.close();
     *crcOut = ~crc;
@@ -806,59 +511,17 @@ LoFSMoveResult LoFS::moveIfCrc32Matches(const char *src, const char *dst, uint32
 uint64_t LoFS::totalBytes(const char *mountRoot)
 {
     Resolved r;
-    if (!resolve(mountRoot, r) || r.kind != PathKind::MountRoot)
+    if (!resolve(mountRoot, r) || r.kind != PathKind::MountRoot || !r.volume)
         return 0;
-    concurrency::LockGuard g(spiLock);
-    if (r.backend == Backend::Sd) {
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-        return SD.totalBytes();
-#endif
-    }
-#if defined(ARCH_ESP32) || defined(ARCH_RP2040)
-    return FSCom.totalBytes();
-#elif defined(ARCH_NRF52)
-    const lfs_config *cfg = lofsFs(r.backend)._getFS()->cfg;
-    return cfg ? (uint64_t)cfg->block_size * cfg->block_count : 0;
-#else
-    return 0;
-#endif
+    return r.volume->totalBytes();
 }
-
-#if defined(ARCH_NRF52)
-static int lofsCountBlock(void *ctx, lfs_block_t block)
-{
-    (void)block;
-    (*(uint32_t *)ctx)++;
-    return 0;
-}
-#endif
 
 uint64_t LoFS::usedBytes(const char *mountRoot)
 {
     Resolved r;
-    if (!resolve(mountRoot, r) || r.kind != PathKind::MountRoot)
+    if (!resolve(mountRoot, r) || r.kind != PathKind::MountRoot || !r.volume)
         return 0;
-    concurrency::LockGuard g(spiLock);
-    if (r.backend == Backend::Sd) {
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-        return SD.usedBytes();
-#endif
-    }
-#if defined(ARCH_ESP32) || defined(ARCH_RP2040)
-    return FSCom.usedBytes();
-#elif defined(ARCH_NRF52)
-    Adafruit_LittleFS &fs = lofsFs(r.backend);
-    lfs_t *lfs = fs._getFS();
-    uint32_t blocks = 0;
-    fs._lockFS();
-    int err = lfs_traverse(lfs, lofsCountBlock, &blocks);
-    fs._unlockFS();
-    if (err || !lfs->cfg)
-        return 0;
-    return (uint64_t)blocks * lfs->cfg->block_size;
-#else
-    return 0;
-#endif
+    return r.volume->usedBytes();
 }
 
 uint64_t LoFS::freeBytes(const char *mountRoot)
@@ -873,14 +536,14 @@ uint64_t LoFS::freeBytes(const char *mountRoot)
 uint32_t LoFS::mountReserve(const char *name)
 {
     Mount *m = name ? findByName(name, strlen(name)) : nullptr;
-    return (m && m->shared) ? LOFS_SHARED_RESERVE_BYTES : 0;
+    return (m && m->shared) ? lofsPlatformSharedReserve(name) : 0;
 }
 
 bool LoFS::hasRoom(const char *path, uint32_t bytes)
 {
     Resolved r;
     const char *name = mountNameForPath(path);
-    if (!name || !resolve(path, r))
+    if (!name || !resolve(path, r) || !r.volume)
         return true;
     char root[20];
     snprintf(root, sizeof(root), "/%s", name);
@@ -891,17 +554,8 @@ bool LoFS::hasRoom(const char *path, uint32_t bytes)
     const uint64_t freeB = used < total ? total - used : 0;
 
     uint32_t block = 4096;
-    uint32_t slack = 2 * 4096;
-    if (r.backend == Backend::Sd) {
-        block = 512;
-        slack = 64 * 1024;
-    }
-#if defined(ARCH_NRF52)
-    if (r.backend == Backend::Flash || r.backend == Backend::Flash2) {
-        block = 128;
-        slack = 4 * 128;
-    }
-#endif
+    uint32_t slack = 8192;
+    r.volume->spaceHint(&block, &slack);
     const uint64_t need = (((uint64_t)bytes + block - 1) / block) * block + slack + mountReserve(name);
     return freeB >= need;
 }
@@ -915,7 +569,7 @@ bool LoFS::rmdir(const char *filepath, bool recursive)
         return true;
 
     if (recursive) {
-        File dir = open(filepath, FILE_O_READ);
+        LoFile dir = open(filepath, "r");
         if (!dir)
             return false;
 
@@ -926,7 +580,7 @@ bool LoFS::rmdir(const char *filepath, bool recursive)
 
         bool result = true;
         while (true) {
-            File file = dir.openNextFile();
+            LoFile file = dir.openNextFile();
             if (!file)
                 break;
 
@@ -957,20 +611,8 @@ bool LoFS::rmdir(const char *filepath, bool recursive)
     }
 
     Resolved r;
-    if (!resolve(filepath, r) || r.kind == PathKind::VirtualRoot || r.kind == PathKind::MountRoot)
+    if (!resolve(filepath, r) || r.kind == PathKind::VirtualRoot || r.kind == PathKind::MountRoot || !r.volume)
         return false;
 
-    const char *bp = backendPath(r);
-
-    concurrency::LockGuard g(spiLock);
-    if (r.backend == Backend::Sd) {
-#if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
-        return SD.rmdir(bp);
-#endif
-    }
-#if defined(ARCH_NRF52)
-    return lofsFs(r.backend).rmdir(bp);
-#else
-    return lofsFs(r.backend == Backend::Flash2).rmdir(bp);
-#endif
+    return r.volume->rmdir(backendPath(r));
 }

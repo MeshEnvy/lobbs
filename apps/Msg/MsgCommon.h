@@ -1,5 +1,5 @@
 #pragma once
-#include "../../LoBBSCommandCtx.h"
+#include "../../core/LoBBSCommandCtx.h"
 #include <stddef.h>
 #include <stdint.h>
 

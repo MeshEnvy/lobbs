@@ -1,5 +1,5 @@
 #pragma once
-#include "../../LoBBSCommandCtx.h"
+#include "../../core/LoBBSCommandCtx.h"
 #include "ConfigRecords.h"
 #include <lodb/LoDB.h>
 #include <loscalar/LoScalar.h>

@@ -1,5 +1,5 @@
 #pragma once
-#include "../../LoBBSConfig.h"
+#include "../../core/LoBBSConfig.h"
 #include <lodb/LoDB.h>
 #include <stdint.h>
 #include <string>

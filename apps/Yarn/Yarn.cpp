@@ -1,7 +1,7 @@
 #include "Yarn.h"
 
-#include "../../LoBBSBootTrace.h"
-#include "LoBBSStackGuard.h"
+#include "../../core/LoBBSBootTrace.h"
+#include "core/LoBBSStackGuard.h"
 
 YarnApp::YarnApp(LoDb &lodb) : dal_(lodb)
 {

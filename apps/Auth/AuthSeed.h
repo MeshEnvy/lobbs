@@ -1,7 +1,7 @@
 #pragma once
 #if LOBBS_SEED
 
-class LoBBSModule;
-void lobbsSeedAuth(LoBBSModule &mod);
+class LoBBSKernel;
+void lobbsSeedAuth(LoBBSKernel &kernel);
 
 #endif

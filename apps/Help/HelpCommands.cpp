@@ -1,13 +1,13 @@
 #include "HelpCommands.h"
-#include "../../LoBBSCommandRegistry.h"
-#include "../../LoBBSConfig.h"
-#include "../../LoBBSHooks.h"
-#include "../../LoBBSResponse.h"
-#include "../../LoBBSVersion.h"
+#include "../../core/LoBBSCommandRegistry.h"
+#include "../../core/LoBBSConfig.h"
+#include "../../core/LoBBSHooks.h"
+#include "../../core/LoBBSResponse.h"
+#include "../../core/LoBBSVersion.h"
 #include <cstring>
 #include <lodb/LoDB.h>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 static void lobbsTrimRestInPlace(char *s)
 {

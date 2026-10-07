@@ -1,6 +1,6 @@
 #include "Config.h"
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 ConfigApp::ConfigApp(LoDb &lodb) : dal_(lodb) {}
 

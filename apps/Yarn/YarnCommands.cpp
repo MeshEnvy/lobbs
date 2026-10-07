@@ -1,9 +1,9 @@
 #include "YarnCommands.h"
-#include "../../LoBBSCommandRegistry.h"
-#include "../../LoBBSHooks.h"
-#include "../../LoBBSModule.h"
-#include "../../LoBBSReply.h"
-#include "../../LoBBSResponse.h"
+#include "../../core/LoBBSCommandRegistry.h"
+#include "../../core/LoBBSHooks.h"
+#include "../../core/LoBBSKernel.h"
+#include "../../core/LoBBSReply.h"
+#include "../../core/LoBBSResponse.h"
 #include "../Config/ConfigCommon.h"
 #include "YarnDal.h"
 #include <cstdio>
@@ -11,17 +11,17 @@
 #include <lodb/LoDB.h>
 #include <strings.h>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 static void replyYarnView(LoBBSCommandCtx &ctx, bool markSeen)
 {
     char buf[LOBBS_REPLY_BYTES + 1];
-    if (!ctx.mod->yarn().dal().formatYarnView(buf, sizeof(buf))) {
+    if (!ctx.kernel->yarn().dal().formatYarnView(buf, sizeof(buf))) {
         lobbsCommandReplyError(ctx, "Yarn error.");
         return;
     }
     if (markSeen && lobbsCtxLoggedIn(ctx))
-        ctx.mod->yarn().dal().markYarnSeen(lobbsCtxUserUuid(ctx));
+        ctx.kernel->yarn().dal().markYarnSeen(lobbsCtxUserUuid(ctx));
     lobbsCommandReply(ctx, buf);
 }
 
@@ -55,7 +55,7 @@ static void handleYarn(LoBBSCommandCtx &ctx)
     const uint32_t words = lobbsConfigGet(ctx, "yarn.words");
     const uint32_t chars = lobbsConfigGet(ctx, "yarn.chars");
     if (const char *err =
-            ctx.mod->yarn().dal().appendWords(lobbsCtxUserUuid(ctx), ctx.session.isSysop, toks, n, period, words, chars)) {
+            ctx.kernel->yarn().dal().appendWords(lobbsCtxUserUuid(ctx), ctx.session.isSysop, toks, n, period, words, chars)) {
         lobbsCommandReplyError(ctx, err);
         return;
     }
@@ -84,14 +84,14 @@ static void filterYarnHelpForTopic(LoBBSCommandCtx *ctx, LoScalar &value, const 
 static void filterYarnStatusLines(LoBBSCommandCtx *ctx, std::vector<LoScalar> &lines, const LoScalar &args)
 {
     (void)args;
-    if (!ctx || !ctx->mod)
+    if (!ctx || !ctx->kernel)
         return;
     char value[32];
     if (lobbsCtxLoggedIn(*ctx)) {
-        uint32_t n = ctx->mod->yarn().dal().newWordsForUser(lobbsCtxUserUuid(*ctx));
+        uint32_t n = ctx->kernel->yarn().dal().newWordsForUser(lobbsCtxUserUuid(*ctx));
         snprintf(value, sizeof(value), "%u new words", (unsigned)n);
     } else {
-        uint32_t n = ctx->mod->yarn().dal().totalWordsAppended();
+        uint32_t n = ctx->kernel->yarn().dal().totalWordsAppended();
         snprintf(value, sizeof(value), "%u words total", (unsigned)n);
     }
     lobbsRecordPush(lines, "Yarn", value);
@@ -102,8 +102,8 @@ static void filterYarnStatusLines(LoBBSCommandCtx *ctx, std::vector<LoScalar> &l
 static void actionYarnSeed(LoBBSCommandCtx *ctx, const LoScalar &args)
 {
     (void)args;
-    if (ctx && ctx->mod)
-        lobbsSeedYarn(*ctx->mod);
+    if (ctx && ctx->kernel)
+        lobbsSeedYarn(*ctx->kernel);
 }
 #endif
 

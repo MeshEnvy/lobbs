@@ -1,15 +1,13 @@
 #include "FsCommands.h"
-#include "../../LoBBSCommandRegistry.h"
-#include "../../LoBBSHooks.h"
-#include "../../LoBBSInstall.h"
-#include "../../LoBBSModule.h"
-#include "../../LoBBSReply.h"
-#include "../../LoBBSReplyCache.h"
-#include "../../LoBBSResponse.h"
+#include "../../core/LoBBSCommandRegistry.h"
+#include "../../core/LoBBSHooks.h"
+#include "../../core/LoBBSInstall.h"
+#include "../../core/LoBBSKernel.h"
+#include "../../core/LoBBSReply.h"
+#include "../../core/LoBBSReplyCache.h"
+#include "../../core/LoBBSResponse.h"
 #include "../AppUtil.h"
-#include "mesh/NodeDB.h"
-#include "mesh/Throttle.h"
-#include <Arduino.h>
+#include "platforms/LoPlatform.h"
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
@@ -21,7 +19,7 @@
 #include <loutil/LoUtil.h>
 #include <string>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 static constexpr int FS_LS_MAX_NAMES = 128;
 static constexpr size_t FS_NAME_BYTES = 48;
@@ -162,7 +160,7 @@ static void fsSessionPrep(LoBBSCommandCtx &ctx)
 {
     if (LoFS::isDirectory(ctx.session.cwd))
         return;
-    if (ctx.mod->auth().dal().setSessionCwd(ctx.session.nodeId, "/"))
+    if (ctx.kernel->auth().dal().setSessionCwd(ctx.session.nodeId, "/"))
         strncpy(ctx.session.cwd, "/", sizeof(ctx.session.cwd));
 }
 
@@ -227,7 +225,7 @@ static void handleLs(LoBBSCommandCtx &ctx)
 
 static void fsReplyFileText(LoBBSCommandCtx &ctx, const char *path, bool hex)
 {
-    File f = LoFS::open(path, FILE_O_READ);
+    LoFile f = LoFS::open(path, "r");
     if (!f) {
         lobbsCommandReplyError(ctx, "No such file.");
         return;
@@ -334,7 +332,7 @@ static void handleRm(LoBBSCommandCtx &ctx)
         return;
     }
 
-    File f = LoFS::open(spec, FILE_O_READ);
+    LoFile f = LoFS::open(spec, "r");
     if (!f) {
         lobbsCommandReplyError(ctx, "No such file.");
         return;
@@ -511,7 +509,7 @@ static void handleDf(LoBBSCommandCtx &ctx)
     struct Ctx {
         LoBBSResponse *resp;
         const char *installRoot;
-    } dc{&resp, lobbsInstallRoot(*ctx.mod)};
+    } dc{&resp, lobbsInstallRoot(*ctx.kernel)};
     LoFS::eachPresentMount(
         [](void *v, const char *name) {
             auto *dc = (Ctx *)v;
@@ -570,18 +568,18 @@ static void handleFormat(LoBBSCommandCtx &ctx)
         lobbsCommandReplyError(ctx, "Refused: format SD cards on a PC.");
         return;
     }
-    const char *installRoot = lobbsInstallRoot(*ctx.mod);
-    const bool isFlash = strcmp(name, "flash") == 0;
+    const char *installRoot = lobbsInstallRoot(*ctx.kernel);
+    const bool isFlash = strcmp(name, "internal") == 0;
     const bool isInstall = installRoot[0] && strcmp(installRoot + 1, name) == 0;
 
     char msg[160];
     if (!code) {
         static const char alphabet[] = "abcdefghjkmnpqrstuvwxyz23456789";
         for (size_t i = 0; i < sizeof(fsFormatPending.code) - 1; i++)
-            fsFormatPending.code[i] = alphabet[random(sizeof(alphabet) - 1)];
+            fsFormatPending.code[i] = alphabet[lobbsPlatformRandom(sizeof(alphabet) - 1)];
         fsFormatPending.code[sizeof(fsFormatPending.code) - 1] = '\0';
         fsFormatPending.nodeId = ctx.session.nodeId;
-        fsFormatPending.armedMs = millis();
+        fsFormatPending.armedMs = lobbsPlatformMillis();
         strncpy(fsFormatPending.mount, name, sizeof(fsFormatPending.mount) - 1);
         fsFormatPending.mount[sizeof(fsFormatPending.mount) - 1] = '\0';
         char root[16], size[LO_HUMAN_BYTES_LEN];
@@ -595,7 +593,7 @@ static void handleFormat(LoBBSCommandCtx &ctx)
 
     const bool ok = fsFormatPending.code[0] && fsFormatPending.nodeId == ctx.session.nodeId &&
                     strcmp(fsFormatPending.mount, name) == 0 && strcmp(fsFormatPending.code, code) == 0 &&
-                    Throttle::isWithinTimespanMs(fsFormatPending.armedMs, FS_FORMAT_CONFIRM_MS);
+                    (lobbsPlatformMillis() - fsFormatPending.armedMs) < FS_FORMAT_CONFIRM_MS;
     fsFormatPending.code[0] = '\0';
     if (!ok) {
         snprintf(msg, sizeof(msg), "Wrong or expired code. Run /format %s for a new one.", name);
@@ -606,12 +604,11 @@ static void handleFormat(LoBBSCommandCtx &ctx)
         lobbsCommandReplyError(ctx, "Format failed.");
         return;
     }
-    if (isFlash && nodeDB)
-        nodeDB->saveToDisk();
+    lobbsPlatformAfterFormat(name);
     if (isInstall)
-        lobbsInstallInit(*ctx.mod);
+        lobbsInstallInit(*ctx.kernel);
     snprintf(msg, sizeof(msg), "Formatted /%s.%s", name,
-             lobbsInstallState(*ctx.mod) == LoBBSInstallState::Blank ? " LoBBS is blank. Run /install." : "");
+             lobbsInstallState(*ctx.kernel) == LoBBSInstallState::Blank ? " LoBBS is blank. Run /install." : "");
     lobbsCommandReply(ctx, msg);
 }
 
@@ -659,12 +656,35 @@ static int fsB62DecodedByteCount(size_t charLen)
     }
 }
 
-/** Decode one base62 chunk into out (max outCap). Returns byte count or -1. */
-static int fsB62DecodeChunk(const char *b62, uint8_t *out, size_t outCap)
+static int fsB62WidthForBytes(int byteCount)
+{
+    switch (byteCount) {
+    case 1:
+        return 2;
+    case 2:
+        return 3;
+    case 3:
+        return 5;
+    case 4:
+        return 6;
+    case 5:
+        return 7;
+    case 6:
+        return 9;
+    case 7:
+        return 10;
+    case 8:
+        return 11;
+    default:
+        return -1;
+    }
+}
+
+/** Decode one fixed-width base62 chunk into out. Returns byte count or -1. */
+static int fsB62DecodeChunkSpan(const char *b62, size_t charLen, uint8_t *out, size_t outCap)
 {
     if (!b62 || !out)
         return -1;
-    size_t charLen = strlen(b62);
     int byteCount = fsB62DecodedByteCount(charLen);
     if (byteCount < 0 || (size_t)byteCount > outCap)
         return -1;
@@ -684,6 +704,34 @@ static int fsB62DecodeChunk(const char *b62, uint8_t *out, size_t outCap)
     for (int i = 0; i < byteCount; i++)
         out[i] = (uint8_t)((val >> (8 * (byteCount - 1 - i))) & 0xff);
     return byteCount;
+}
+
+/** Decode concatenated base62 segments (lobbs_chunkify.py format). */
+static int fsB62DecodePayload(const char *b62, uint8_t *out, size_t outCap)
+{
+    if (!b62 || !out)
+        return -1;
+    size_t p = 0;
+    size_t outPos = 0;
+    const size_t slen = strlen(b62);
+    while (p < slen) {
+        bool matched = false;
+        for (int k = 8; k >= 1; k--) {
+            const int w = fsB62WidthForBytes(k);
+            if (w < 0 || p + (size_t)w > slen)
+                continue;
+            const int n = fsB62DecodeChunkSpan(b62 + p, (size_t)w, out + outPos, outCap - outPos);
+            if (n == k) {
+                p += (size_t)w;
+                outPos += (size_t)n;
+                matched = true;
+                break;
+            }
+        }
+        if (!matched)
+            return -1;
+    }
+    return (int)outPos;
 }
 
 static bool fsParentIsDirectory(const char *path)
@@ -917,12 +965,6 @@ static void handleUpload(LoBBSCommandCtx &ctx)
         return;
     }
 
-    int decodedLen = fsB62DecodeChunk(b62, fsUploadDecodeScratch, FS_UPLOAD_DECODE_MAX);
-    if (decodedLen < 0) {
-        lobbsCommandReplyError(ctx, "Bad data.");
-        return;
-    }
-
     uint32_t curSize = 0;
     bool isDir = false;
     if (LoFS::stat(path, &curSize, &isDir)) {
@@ -945,6 +987,12 @@ static void handleUpload(LoBBSCommandCtx &ctx)
         return;
     }
 
+    int decodedLen = fsB62DecodePayload(b62, fsUploadDecodeScratch, FS_UPLOAD_DECODE_MAX);
+    if (decodedLen < 0) {
+        lobbsCommandReplyError(ctx, "Bad data.");
+        return;
+    }
+
     if (!LoFS::hasRoom(path, (uint32_t)decodedLen)) {
         lobbsCommandReplyError(ctx, "Disk full.");
         return;
@@ -956,8 +1004,11 @@ static void handleUpload(LoBBSCommandCtx &ctx)
 
     uint32_t newSize = 0;
     if (!LoFS::stat(path, &newSize, &isDir) || isDir) {
-        lobbsCommandReplyError(ctx, "Failed.");
-        return;
+        newSize = offset + (uint32_t)decodedLen;
+        if (newSize < offset) {
+            lobbsCommandReplyError(ctx, "Failed.");
+            return;
+        }
     }
     char line[32];
     snprintf(line, sizeof(line), "Size %u.", (unsigned)newSize);
@@ -1009,7 +1060,7 @@ static void handleCd(LoBBSCommandCtx &ctx)
         lobbsCommandReplyError(ctx, "No such directory.");
         return;
     }
-    if (!ctx.mod->auth().dal().setSessionCwd(ctx.session.nodeId, path)) {
+    if (!ctx.kernel->auth().dal().setSessionCwd(ctx.session.nodeId, path)) {
         lobbsCommandReplyError(ctx, "Failed.");
         return;
     }

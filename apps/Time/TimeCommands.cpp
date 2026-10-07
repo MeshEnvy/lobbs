@@ -1,23 +1,22 @@
 #include "TimeCommands.h"
-#include "../../LoBBSCommandRegistry.h"
-#include "../../LoBBSHooks.h"
-#include "../../LoBBSReply.h"
-#include "../../LoBBSResponse.h"
-#include "gps/RTC.h"
+#include "../../core/LoBBSCommandRegistry.h"
+#include "../../core/LoBBSHooks.h"
+#include "../../core/LoBBSReply.h"
+#include "../../core/LoBBSResponse.h"
+#include "platforms/LoPlatform.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <stdint.h>
-#include <sys/time.h>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 static void handleTime(LoBBSCommandCtx &ctx)
 {
     const char *peek = lobbsArgPeek(ctx);
     if (!peek) {
         char buf[LOBBS_REPLY_BYTES + 1];
-        snprintf(buf, sizeof(buf), "Time: %u (%s)", (unsigned)getTime(), RtcName(getRTCQuality()));
+        snprintf(buf, sizeof(buf), "Time: %u (%s)", (unsigned)lobbsPlatformUnixNow(), lobbsPlatformClockName());
         lobbsCommandReply(ctx, buf);
         return;
     }
@@ -32,13 +31,10 @@ static void handleTime(LoBBSCommandCtx &ctx)
         lobbsCommandReplyError(ctx, "Usage: /time\nUsage: /time unix (sysop)");
         return;
     }
-    struct timeval tv;
-    tv.tv_sec = (time_t)sec;
-    tv.tv_usec = 0;
-    RTCSetResult r = perhapsSetRTC(RTCQualityNTP, &tv, true);
-    if (r == RTCSetResultSuccess)
+    LoPlatformSetUnixResult r = lobbsPlatformSetUnix(sec);
+    if (r == LoPlatformSetUnixResult::Ok)
         lobbsCommandReply(ctx, "Time set.");
-    else if (r == RTCSetResultInvalidTime)
+    else if (r == LoPlatformSetUnixResult::Invalid)
         lobbsCommandReplyError(ctx, "Invalid time.");
     else
         lobbsCommandReplyError(ctx, "Could not set time.");
@@ -74,4 +70,3 @@ void lobbsTimeRegisterCommands()
     lobbsAddFilter("help_topics", filterTimeHelpTopics, LOBBS_HOOK_PRIORITY_TIME);
     lobbsAddFilter("help_for_topic", filterTimeHelpForTopic, LOBBS_HOOK_PRIORITY_TIME);
 }
-

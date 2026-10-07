@@ -1,16 +1,16 @@
-#include "../../LoBBSConfig.h"
+#include "../../core/LoBBSConfig.h"
 #if LOBBS_SEED
 
-#include "../../LoBBSModule.h"
+#include "../../core/LoBBSKernel.h"
 #include "AuthDal.h"
 #include "AuthSeed.h"
 #include <cstdio>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
-void lobbsSeedAuth(LoBBSModule &mod)
+void lobbsSeedAuth(LoBBSKernel &kernel)
 {
-    AuthDal &auth = mod.auth().dal();
+    AuthDal &auth = kernel.auth().dal();
     static constexpr const char *kPass = "demo1";
     auth.createUser("sysop", kPass, 0xDE000001, true);
     auth.logoutUser(0xDE000001);

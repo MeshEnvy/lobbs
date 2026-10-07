@@ -1,9 +1,9 @@
 #include "ConfigCommands.h"
-#include "../../LoBBSCommandRegistry.h"
-#include "../../LoBBSHooks.h"
-#include "../../LoBBSModule.h"
-#include "../../LoBBSReplyCache.h"
-#include "../../LoBBSResponse.h"
+#include "../../core/LoBBSCommandRegistry.h"
+#include "../../core/LoBBSHooks.h"
+#include "../../core/LoBBSKernel.h"
+#include "../../core/LoBBSReplyCache.h"
+#include "../../core/LoBBSResponse.h"
 #include "../AppUtil.h"
 #include "ConfigCommon.h"
 #include "ConfigDal.h"
@@ -12,7 +12,7 @@
 #include <cstring>
 #include <strings.h>
 
-#include "LoBBSStackGuard.h"
+#include "core/LoBBSStackGuard.h"
 
 static uint32_t gLobbsPagerTtlSec = LOBBS_REPLY_CACHE_TTL_SEC;
 
@@ -63,7 +63,7 @@ static void handleConfig(LoBBSCommandCtx &ctx)
 {
     if (!lobbsCommandRequireSysop(ctx))
         return;
-    ConfigDal &cfg = ctx.mod->config().dal();
+    ConfigDal &cfg = ctx.kernel->config().dal();
     const char *key = lobbsArgShift(ctx);
     if (!key) {
         LoBBSResponse resp;
@@ -160,13 +160,13 @@ static void filterConfigHelpTopics(LoBBSCommandCtx *ctx, std::vector<LoScalar> &
 static void filterConfigHelpForTopic(LoBBSCommandCtx *ctx, LoScalar &value, const LoScalar &args)
 {
     lobbsHelpForTable(ctx, value, args, "config", configHelpVerbs, sizeof(configHelpVerbs) / sizeof(configHelpVerbs[0]));
-    if (!ctx || !ctx->mod || value.has(LODB_F_DESCRIPTION) || !lobbsCtxIsSysop(*ctx))
+    if (!ctx || !ctx->kernel || value.has(LODB_F_DESCRIPTION) || !lobbsCtxIsSysop(*ctx))
         return;
     std::string query;
     if (!args.getString(LODB_F_TITLE, query) || strncasecmp(query.c_str(), "config ", 7) != 0)
         return;
     const char *key = query.c_str() + 7;
-    ConfigDal &cfg = ctx->mod->config().dal();
+    ConfigDal &cfg = ctx->kernel->config().dal();
     cfg.ensureRegistry(*ctx);
     const LoScalar *def = cfg.findKeyDef(key);
     if (!def)
