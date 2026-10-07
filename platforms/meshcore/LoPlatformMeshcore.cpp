@@ -19,6 +19,7 @@
 #include "platforms/arduino/LoPlatformArduino.h"
 #include "core/LoBBSDispatch.h"
 #include "core/LoBBSKernel.h"
+#include <lofs/LoFS.h>
 #include "platforms/meshcore/LoPlatformMeshcore.h"
 #include "lofs/platforms/meshcore/LoFSMountsMeshcore.h"
 
@@ -165,6 +166,7 @@ void lobbsMeshCoreInit(LoBBSKernel *core, BaseChatMesh &mesh, void *filesystem, 
 void lobbsMeshCoreLoop(LoBBSKernel *core)
 {
     (void)core;
+    LoFS::maintain(15);
 }
 
 static void lobbsFillInbound(LoInbound &in, const ContactInfo &from, const char *text)

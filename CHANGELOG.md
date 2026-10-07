@@ -16,7 +16,7 @@ Planned major release **2.0.0** (not tagged yet).
 
 ### Changed
 
-- LoFS: volume provider layer (`LoFSVolume`, block devices, host mount tables). Mount names are now `sd`, `qspi`, `reserve`, `spare`, `internal` (replacing `extra`, `flash3`, `flash2`, `flash`). Every LittleFS mount is formattable via `/format`; SD stays refused.
+- LoFS: mount names are `sd`, `lofs`, `extra`, `internal`. **`/lofs`** is the exclusive LoLog slot (owned QSPI NOR or nRF52840 flash2 window, never both in the mount table). QSPI Meshtastic envs use `nrf52840_s140_v7_qspi.ld` (no flash2 gap; InternalFS still at `0xED000`). MeshCore `/extra` adopts host ExtraFS; QSPI is not adopted as LittleFS. Dropped `qspi`, `spare`, `reserve`, and flash3 mounts. Every LittleFS mount is formattable via `/format`; SD stays refused. Host tests: `ci/host` `test_lolog_host`.
 
 ### Added
 

@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static constexpr const char *LOFS_MOUNT_ORDER[] = {"sd", "qspi", "reserve", "spare", "internal"};
-static constexpr int LOFS_MOUNT_ORDER_LEN = 5;
+static constexpr const char *LOFS_MOUNT_ORDER[] = {"sd", "lofs", "extra", "internal"};
+static constexpr int LOFS_MOUNT_ORDER_LEN = 4;
 static constexpr int LOFS_MAX_MOUNTS = 6;
 
 class LoFSVolume {
@@ -28,6 +28,9 @@ class LoFSVolume {
     virtual uint64_t usedBytes() = 0;
     virtual bool format() = 0;
     virtual void spaceHint(uint32_t *blockOut, uint32_t *slackOut) = 0;
+
+    /** Background flush, merge, and cleaning (LoLog volumes). */
+    virtual void maintain(uint32_t budgetMs) { (void)budgetMs; }
 
     static const char *normalizeRel(const char *rel);
 };

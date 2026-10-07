@@ -124,6 +124,16 @@ void LoFS::eachPresentMount(void (*fn)(void *ctx, const char *name), void *ctx)
     }
 }
 
+void LoFS::maintain(uint32_t budgetMs)
+{
+    if (!begun)
+        return;
+    for (int i = 0; i < mountCount; i++) {
+        if (mounts[i].present && mounts[i].volume)
+            mounts[i].volume->maintain(budgetMs);
+    }
+}
+
 bool LoFS::resolve(const char *filepath, Resolved &out)
 {
     out = {};

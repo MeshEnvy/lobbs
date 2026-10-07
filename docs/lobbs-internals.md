@@ -95,13 +95,13 @@ Machine: records encoded as LoScalar lines, sliced into pages with `<id>ok [n:ma
 
 ## LoFS and install
 
-LoFS exposes `/` as a virtual root listing mounts. Writable paths start with `/<mount>/…`. Slot names in install preference order: `sd`, `qspi`, `reserve`, `spare`, `internal`. Each slot maps to a `LoFSVolume` provider (adopted host LittleFS or LoBBS-mounted block device). Host composition lives in `lofs/platforms/meshtastic/LoFSMountsMeshtastic.cpp` and `lofs/platforms/meshcore/LoFSMountsMeshcore.cpp`. Mount roots cannot be removed, renamed, or used as copy sources. Cross-mount `mv` copies files then deletes the source. Directories require same-mount rename.
+LoFS exposes `/` as a virtual root listing mounts. Writable paths start with `/<mount>/…`. Slot names in install preference order: `sd`, `lofs`, `extra`, `internal`. Each slot maps to a `LoFSVolume` provider (adopted host LittleFS, LoLog on `/lofs`, or SD). Host composition lives in `lofs/platforms/meshtastic/LoFSMountsMeshtastic.cpp` and `lofs/platforms/meshcore/LoFSMountsMeshcore.cpp`. Mount roots cannot be removed, renamed, or used as copy sources. Cross-mount `mv` copies files then deletes the source. Directories require same-mount rename.
 
-`/spare` is the middle nRF52840 internal window (100 KiB at `0xD4000`–`0xED000`, weak symbols `__flash2_start` / `__flash2_end`). Meshtastic mounts it with `LoFSNrfFlashBlockDevice` when the linker provides the symbols. MeshCore adopts host `ExtraFS` on the same range when `EXTRAFS` is enabled.
+`/lofs` is the exclusive LoLog slot. On boards with owned QSPI NOR (`LOFS_BOARD_HAS_QSPI`), LoLog uses `LoFSQspiNorBlockDevice` (about 2 MiB). Meshtastic QSPI envs link `nrf52840_s140_v7_qspi.ld`: application flash runs to `0xED000` with no `__flash2` gap. Other nRF52840 Meshtastic builds use `nrf52840_s140_v7.ld`, which stops the app at `0xD4000` and provides `__flash2_start` / `__flash2_end` (100 KiB) for `/lofs` via `LoFSNrfFlashRawDevice`. Meshtastic `InternalFS` stays at the Adafruit default (`0xED000` on nRF52840). ESP32 and boards with neither QSPI nor flash2 have no `/lofs`.
 
-`/reserve` is the low window (`0xCC000`–`0xD4000`, `__flash3_*`) when the opt-in MeshCore linker script or Meshtastic layout leaves it empty. LoBBS mounts it with the same block device helper.
+`/lofs` uses **LoLog** (`lofs/lolog/`, `LoFSLoLogVolume`): append-only data segments, on-flash index runs, background clean/flush via `LoFS::maintain()` from the Meshtastic module `runOnce` and `lobbsMeshCoreLoop`. `/format lofs` erases the volume and starts a new epoch. There is no LittleFS on `/lofs`. MeshCore does not adopt host QSPI LittleFS: when `QSPIFLASH` is set, the chip is `/lofs` LoLog like Meshtastic.
 
-`/qspi` is onboard NOR (2 MiB). Meshtastic always mounts via `LoFSQspiNorBlockDevice` when `LOFS_ENABLE_EXTRA_QSPI`. MeshCore adopts `QSPIFlash` when `QSPIFLASH`, otherwise LoBBS mounts the chip when present.
+`/extra` is MeshCore only: host `ExtraFS` LittleFS at `0xD4000` when `EXTRAFS` is enabled and the board has no QSPI (`!QSPIFLASH`). It is shared with the radio. Do not mount `/lofs` on the same flash range as `/extra`.
 
 `/internal` is the host primary filesystem (`InternalFS` / `FSCom` on Meshtastic, the filesystem pointer passed to `lobbsMeshCoreInit` on MeshCore). It is shared: LoBBS keeps a reserve on writes. `/format internal` on Meshtastic runs `FSCom.format()` then `nodeDB->saveToDisk()`. Formatting the install mount reruns `lobbsInstallInit`.
 
@@ -109,7 +109,7 @@ LoFS exposes `/` as a virtual root listing mounts. Writable paths start with `/<
 
 Each mount has `dbSafe` (computed at boot: non-shared volumes are always db-safe; shared volumes are db-safe only when no higher-preference mount is present) and `formattable`. LittleFS mounts are formattable; `sd` is not. Install points come from the `install_mounts` list filter in preference order above.
 
-MeshCore nRF52840 can opt into `/reserve` with `boards/nrf52840_s140_v7_lobbs_flash3.ld`. Example env: `RAK_4631_terminal_chat` in `lobbs-meshcore-firmware`. `lobbsMeshCoreInit` calls `lofsMeshcoreSetHostFilesystem` before `LoFS::begin`.
+`lobbsMeshCoreInit` calls `lofsMeshcoreSetHostFilesystem` before `LoFS::begin`.
 
 Shared mounts keep reserve bytes free (16 KiB nRF52, 128 KiB other hardware, 0 Portduino). `LoFS::hasRoom(path, bytes)` rounds `bytes` up to the block size, adds slack for metadata, adds the mount reserve, and compares with free space. It returns true when the mount reports no size. LoDB checks it before every record write and returns `LODB_ERR_FULL`. FsCommands checks it for `/mkdir`, `/cp`, `/upload`, and cross-mount `/mv`. Apps map `LODB_ERR_FULL` to `Disk full.` via `lobbsDbErrorText`. Deletes are never blocked.
 

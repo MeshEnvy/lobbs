@@ -1,19 +1,17 @@
 #include "LoFSQspiNorBlockDevice.h"
 #include <Arduino.h>
+#include <cstring>
 
 #if LOFS_BOARD_HAS_QSPI
 #include "variant.h"
 #include "nrf.h"
-#include <cstring>
 #include <nrfx_qspi.h>
 
 extern const uint32_t g_ADigitalPinMap[];
 
-#include <Adafruit_LittleFS.h>
-
-static constexpr uint32_t LOFS_QSPI_BLOCK = 4096;
+static constexpr uint32_t LOFS_QSPI_SECTOR = 4096;
 static constexpr uint32_t LOFS_QSPI_PAGE = 256;
-static constexpr uint32_t LOFS_QSPI_BLOCK_COUNT = 512;
+static constexpr uint32_t LOFS_QSPI_SECTOR_COUNT = 512;
 
 static uint8_t lofsQspiScratch[LOFS_QSPI_PAGE] __attribute__((aligned(4)));
 static bool lofsQspiHwReady = false;
@@ -97,96 +95,157 @@ static bool lofsQspiInitHw()
     return true;
 }
 
-static int lofsQspiRead(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, void *buffer, lfs_size_t size)
+static bool lofsQspiReadAddr(uint32_t addr, void *buffer, size_t size)
 {
-    (void)c;
-    uint32_t addr = block * LOFS_QSPI_BLOCK + off;
     if (((uintptr_t)buffer & 3) == 0 && (size & 3) == 0) {
         nrfx_err_t err = nrfx_qspi_read(buffer, size, addr);
-        return err == NRFX_SUCCESS ? 0 : -1;
+        return err == NRFX_SUCCESS;
     }
     uint8_t *dst = (uint8_t *)buffer;
     while (size > 0) {
-        uint32_t chunk = size > LOFS_QSPI_PAGE ? LOFS_QSPI_PAGE : size;
+        uint32_t chunk = size > LOFS_QSPI_PAGE ? LOFS_QSPI_PAGE : (uint32_t)size;
         uint32_t qchunk = (chunk + 3) & ~3u;
         nrfx_err_t err = nrfx_qspi_read(lofsQspiScratch, qchunk, addr);
         if (err != NRFX_SUCCESS)
-            return -1;
+            return false;
         memcpy(dst, lofsQspiScratch, chunk);
         dst += chunk;
         addr += chunk;
         size -= chunk;
     }
-    return 0;
+    return true;
 }
 
-static int lofsQspiProg(const struct lfs_config *c, lfs_block_t block, lfs_off_t off, const void *buffer,
-                        lfs_size_t size)
+static bool lofsQspiProgAddr(uint32_t addr, const void *buffer, size_t size)
 {
-    (void)c;
-    uint32_t addr = block * LOFS_QSPI_BLOCK + off;
     if (((uintptr_t)buffer & 3) == 0 && (size & 3) == 0) {
         nrfx_err_t err = nrfx_qspi_write(buffer, size, addr);
         lofsQspiWaitReady();
-        return err == NRFX_SUCCESS ? 0 : -1;
+        return err == NRFX_SUCCESS;
     }
     const uint8_t *src = (const uint8_t *)buffer;
     while (size > 0) {
-        uint32_t chunk = size > LOFS_QSPI_PAGE ? LOFS_QSPI_PAGE : size;
+        uint32_t chunk = size > LOFS_QSPI_PAGE ? LOFS_QSPI_PAGE : (uint32_t)size;
         uint32_t qchunk = (chunk + 3) & ~3u;
         memcpy(lofsQspiScratch, src, chunk);
         for (uint32_t i = chunk; i < qchunk; i++)
             lofsQspiScratch[i] = 0xFF;
         nrfx_err_t err = nrfx_qspi_write(lofsQspiScratch, qchunk, addr);
         if (err != NRFX_SUCCESS)
-            return -1;
+            return false;
         src += chunk;
         addr += chunk;
         size -= chunk;
     }
     lofsQspiWaitReady();
-    return 0;
+    return true;
 }
 
-static int lofsQspiErase(const struct lfs_config *c, lfs_block_t block)
+bool LoFSQspiNorBlockDevice::begin()
 {
-    (void)c;
-    uint32_t addr = block * LOFS_QSPI_BLOCK;
+    return lofsQspiInitHw();
+}
+
+uint32_t LoFSQspiNorBlockDevice::sectorSize() const
+{
+    return LOFS_QSPI_SECTOR;
+}
+
+uint32_t LoFSQspiNorBlockDevice::pageSize() const
+{
+    return LOFS_QSPI_PAGE;
+}
+
+uint32_t LoFSQspiNorBlockDevice::sectorCount() const
+{
+    return LOFS_QSPI_SECTOR_COUNT;
+}
+
+bool LoFSQspiNorBlockDevice::partialPageProgram() const
+{
+    return true;
+}
+
+bool LoFSQspiNorBlockDevice::read(uint32_t addr, void *buf, size_t len)
+{
+    return lofsQspiReadAddr(addr, buf, len);
+}
+
+bool LoFSQspiNorBlockDevice::prog(uint32_t addr, const void *buf, size_t len)
+{
+    return lofsQspiProgAddr(addr, buf, len);
+}
+
+bool LoFSQspiNorBlockDevice::eraseSector(uint32_t sectorIndex)
+{
+    if (sectorIndex >= LOFS_QSPI_SECTOR_COUNT)
+        return false;
+    uint32_t addr = sectorIndex * LOFS_QSPI_SECTOR;
     nrfx_err_t err = nrfx_qspi_erase(NRF_QSPI_ERASE_LEN_4KB, addr);
     lofsQspiWaitReady();
-    return err == NRFX_SUCCESS ? 0 : -1;
+    if (err == NRFX_SUCCESS && sectorIndex < kMaxSectors)
+        eraseCounts_[sectorIndex]++;
+    return err == NRFX_SUCCESS;
 }
 
-static int lofsQspiSync(const struct lfs_config *c)
+bool LoFSQspiNorBlockDevice::sync()
 {
-    (void)c;
     lofsQspiWaitReady();
-    return 0;
-}
-
-bool LoFSQspiNorBlockDevice::fill(lfs_config &cfg)
-{
-    if (!lofsQspiInitHw())
-        return false;
-    cfg.context = NULL;
-    cfg.read = lofsQspiRead;
-    cfg.prog = lofsQspiProg;
-    cfg.erase = lofsQspiErase;
-    cfg.sync = lofsQspiSync;
-    cfg.read_size = LOFS_QSPI_PAGE;
-    cfg.prog_size = LOFS_QSPI_PAGE;
-    cfg.block_size = LOFS_QSPI_BLOCK;
-    cfg.block_count = LOFS_QSPI_BLOCK_COUNT;
-    cfg.lookahead = 512;
     return true;
 }
 
 #else
 
-bool LoFSQspiNorBlockDevice::fill(lfs_config &cfg)
+bool LoFSQspiNorBlockDevice::begin()
 {
-    (void)cfg;
     return false;
+}
+
+uint32_t LoFSQspiNorBlockDevice::sectorSize() const
+{
+    return 4096;
+}
+
+uint32_t LoFSQspiNorBlockDevice::pageSize() const
+{
+    return 256;
+}
+
+uint32_t LoFSQspiNorBlockDevice::sectorCount() const
+{
+    return 0;
+}
+
+bool LoFSQspiNorBlockDevice::partialPageProgram() const
+{
+    return true;
+}
+
+bool LoFSQspiNorBlockDevice::read(uint32_t addr, void *buf, size_t len)
+{
+    (void)addr;
+    (void)buf;
+    (void)len;
+    return false;
+}
+
+bool LoFSQspiNorBlockDevice::prog(uint32_t addr, const void *buf, size_t len)
+{
+    (void)addr;
+    (void)buf;
+    (void)len;
+    return false;
+}
+
+bool LoFSQspiNorBlockDevice::eraseSector(uint32_t sectorIndex)
+{
+    (void)sectorIndex;
+    return false;
+}
+
+bool LoFSQspiNorBlockDevice::sync()
+{
+    return true;
 }
 
 #endif

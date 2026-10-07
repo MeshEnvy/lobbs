@@ -5,7 +5,7 @@
 #include "LoFile.h"
 
 /**
- * Unified filesystem with a mount table in install preference order: /sd, /qspi, /reserve, /spare, /internal.
+ * Unified filesystem with a mount table in install preference order: /sd, /lofs, /extra, /internal.
  * "/" is a virtual root that lists mounts. Every other path must start with "/<mount>/..." or "/<mount>".
  */
 enum class LoFSMoveResult : uint8_t {
@@ -66,6 +66,9 @@ class LoFS
 
     typedef bool (*ListCallback)(void *ctx, const char *basename, bool isDirectory, uint32_t size);
     static bool list(const char *dirpath, void *ctx, ListCallback fn);
+
+    /** Calls maintain() on each mounted volume (LoLog cleaning on lofs). */
+    static void maintain(uint32_t budgetMs);
 
   private:
     struct Mount {

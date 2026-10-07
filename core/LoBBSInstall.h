@@ -21,7 +21,7 @@ const char *lobbsInstallOfflineHome(const LoBBSKernel &kernel);
 
 void lobbsInstallInit(LoBBSKernel &kernel);
 void lobbsInstallDatabaseOpened(LoBBSKernel &kernel);
-/** `install_mounts` names joined with `|`, e.g. `sd|qspi|reserve|spare|internal`. */
+/** `install_mounts` names joined with `|`, e.g. `sd|lofs|extra|internal`. */
 void lobbsInstallMountList(LoBBSCommandCtx &ctx, char *out, size_t cap);
 
 /** `<root>/lobbs`, e.g. `/extra/lobbs`. */

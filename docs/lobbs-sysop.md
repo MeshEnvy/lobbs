@@ -14,11 +14,11 @@ A new LoBBS node has no database until you install it. Only `/help` and `/instal
 
 | Hardware                 | Install mounts                                       |
 | ------------------------ | ---------------------------------------------------- |
-| nRF52840 Meshtastic      | `sd`, `qspi`, `reserve` (if linked), `spare` (100 KB LoBBS) |
-| nRF52840 MeshCore        | `qspi`, `reserve` (opt-in linker), `spare` (host ExtraFS), `internal` |
-| ESP32 and other hardware | `sd`, `qspi`, `internal`                               |
+| nRF52840 Meshtastic      | `sd`, `lofs` (QSPI or 100 KB flash2), `internal`     |
+| nRF52840 MeshCore        | `lofs` (QSPI boards), `extra`, `internal`            |
+| ESP32 and other hardware | `sd`, `internal`                                     |
 
-Mounts are listed in preference order. `sd` appears when a card is present. `qspi` (about 2 MB) appears on Seeed XIAO nRF52840 kit and SenseCAP Solar Node builds (`LOBBS_EXTRA_QSPI=1`). On nRF52840 Meshtastic, `/internal` is the radio's own filesystem and is only offered when no better mount exists.
+Mounts are listed in preference order. `sd` appears when a card is present. `/lofs` (LoLog, about 2 MB on QSPI or 100 KB on flash2) appears when that hardware exists. On nRF52840 Meshtastic, `/internal` is the radio's own filesystem and is only offered when no better mount exists.
 
 `/install <mount> <user> <pass>` creates the database on that mount and makes `<user>` the SysOp. Use it from the local client (phone app connected over serial/BLE) or from a remote DM encrypted with a configured admin key. If the target already holds a LoBBS database, the same command adopts it and you must supply an existing SysOp username and password. Once installed, `/install` replies `Already installed at /<mount>.`
 
@@ -31,7 +31,7 @@ Everything LoBBS stores lives under `/<mount>/lobbs`:
 | `/<mount>/lobbs/apps/<app>/`  | Reserved for per-app files                           |
 | `/<mount>/lobbs/home/<user>/` | Reserved for user files                              |
 
-On boot LoBBS checks the install mounts in preference order and uses the first one holding `lobbs/install.ls`. Nothing is stored on `/internal`, so a Meshtastic wipe of `/internal` does not lose the install when it lives on `spare`, `qspi`, or `sd`. Pulling the SD card that holds it makes the node look new until the card is back.
+On boot LoBBS checks the install mounts in preference order and uses the first one holding `lobbs/install.ls`. Nothing is stored on `/internal`, so a Meshtastic wipe of `/internal` does not lose the install when it lives on `lofs` or `sd`. Pulling the SD card that holds it makes the node look new until the card is back.
 
 ## Demo builds
 
@@ -69,16 +69,18 @@ Config keys (uint32, defaults in parentheses): `session.max` (16), `session.idle
 | `/upload path [offset:b62]` | Chunked file write at byte offset, or show current size                                                                                                                                                                                                                                         |
 | `/commit src dst`           | Move when file CRC32 matches the 8-hex segment in the source name                                                                                                                                                                                                                               |
 | `/stat path`                | `file N` or `dir`                                                                                                                                                                                                                                                                               |
-| `/df`                       | One line per mount, e.g. `qspi: 1.8M free of 2.0M (12% used) [lobbs]`. Free space excludes the `/internal` reserve. `[lobbs]` marks the install mount                                                                                                                                           |
+| `/df`                       | One line per mount, e.g. `lofs: 1.8M free of 2.0M (12% used) [lobbs]`. Free space excludes the `/internal` reserve. `[lobbs]` marks the install mount                                                                                                                                           |
 | `/format mount [code]`      | Erase a mount. The first call replies with a code; repeat with the code within 2 minutes from the same node. On `/internal` the radio settings are saved again from memory (BLE pairings are lost). On the install mount LoBBS goes blank until `/install`. `sd` is refused (format cards on a PC) |
 
 SysOps painting the wall or adding yarn do not use quota.
 
 ## Files
 
-Paths use mount prefixes: `/internal/...`, `/spare/...` on nRF52840, `/sd/...`, `/qspi/...` on builds with `LOBBS_EXTRA_QSPI=1` and a QSPI flash chip. `/` lists mounts. Do not `/rmtree` `<mount>/lobbs` on your install mount unless you intend to wipe the BBS.
+Paths use mount prefixes: `/internal/...`, `/extra/...` on MeshCore nRF52840, `/sd/...`, `/lofs/...` when that slot exists. `/` lists mounts. Do not `/rmtree` `<mount>/lobbs` on your install mount unless you intend to wipe the BBS.
 
-`/internal` is shared with Meshtastic's own settings and node database. LoBBS leaves a reserve free there (16 KB on nRF52, 128 KB elsewhere). Posts, mail, uploads, and copies that would cut into it reply `Disk full.`. Deleting files always works. `/spare`, `/sd`, and `/qspi` have no reserve.
+`/internal` is shared with Meshtastic's own settings and node database. LoBBS leaves a reserve free there (16 KB on nRF52, 128 KB elsewhere). Posts, mail, uploads, and copies that would cut into it reply `Disk full.`. Deleting files always works. `/extra` and `/sd` have no LoBBS reserve. `/lofs` uses LoLog with cleaner headroom held back so `Disk full.` appears before the log can deadlock; used bytes on `/df` are live data only. Other tools cannot read a LoLog-formatted volume.
+
+After upgrading from builds that used mount names `qspi`, `spare`, or LittleFS on QSPI, run `/format lofs` once (2-minute confirm) before `/install lofs`. Old data is not migrated.
 
 Relative paths work under your session working directory for `ls`, `cat`, `hex`, `stat`, `mkdir`, `cp`, `mv`, `upload`, and `commit`. `rm`, `rmdir`, and `rmtree` require absolute paths.
 

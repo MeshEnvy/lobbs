@@ -6,8 +6,9 @@
 #include "FSCommon.h"
 #include "SPILock.h"
 #include "lofs/volumes/LoFSLittleFsVolume.h"
+#include "lofs/volumes/LoFSLoLogVolume.h"
 #include "lofs/volumes/LoFSArduinoFsVolume.h"
-#include "lofs/volumes/LoFSNrfFlashBlockDevice.h"
+#include "lofs/volumes/LoFSNrfFlashRawDevice.h"
 #include "lofs/volumes/LoFSQspiNorBlockDevice.h"
 #include "lofs/volumes/LoFSSdVolume.h"
 #include <cstring>
@@ -15,8 +16,6 @@
 #if defined(LOFS_NRF52)
 extern "C" uint8_t __flash2_start[] __attribute__((weak));
 extern "C" uint8_t __flash2_end[] __attribute__((weak));
-extern "C" uint8_t __flash3_start[] __attribute__((weak));
-extern "C" uint8_t __flash3_end[] __attribute__((weak));
 #include "flash/flash_nrf5x.h"
 #endif
 
@@ -27,15 +26,14 @@ LoFSSdVolume gSd;
 #endif
 
 #if LOFS_BOARD_HAS_QSPI
-LoFSQspiNorBlockDevice gQspiDevice;
-LoFSLittleFsVolume gQspi(gQspiDevice);
+LoFSQspiNorBlockDevice gLofsDevice;
+LoFSLoLogVolume gLofs(gLofsDevice);
+#elif defined(LOFS_NRF52)
+LoFSNrfFlashRawDevice gLofsWindowDevice(__flash2_start, __flash2_end);
+LoFSLoLogVolume gLofs(gLofsWindowDevice);
 #endif
 
 #if defined(LOFS_NRF52)
-LoFSNrfFlashBlockDevice gReserveDevice(__flash3_start, __flash3_end, 128, true, true, LOBBS_NRF52_FLASH_PAGE_SIZE);
-LoFSNrfFlashBlockDevice gSpareDevice(__flash2_start, __flash2_end, 128, true, true, LOBBS_NRF52_FLASH_PAGE_SIZE);
-LoFSLittleFsVolume gReserve(gReserveDevice);
-LoFSLittleFsVolume gSpare(gSpareDevice);
 LoFSLittleFsVolume gInternal(FSCom);
 #elif LOBBS_ARCH_ESP32 || LOBBS_ARCH_RP2040
 LoFSArduinoFsVolume<decltype(FSCom)> gInternal(FSCom);
@@ -48,6 +46,13 @@ void addSpec(LoFSMountTable &table, const char *name, LoFSVolume *vol, bool shar
     table.add({name, vol, shared, formattable});
 }
 
+#if defined(LOFS_NRF52)
+static bool flash2Present()
+{
+    return (uintptr_t)__flash2_end > (uintptr_t)__flash2_start;
+}
+#endif
+
 } // namespace
 
 void lofsPlatformMounts(LoFSMountTable &table)
@@ -59,12 +64,10 @@ void lofsPlatformMounts(LoFSMountTable &table)
 #endif
 
 #if LOFS_BOARD_HAS_QSPI
-    addSpec(table, "qspi", &gQspi, false, true);
-#endif
-
-#if defined(LOFS_NRF52)
-    addSpec(table, "reserve", &gReserve, false, true);
-    addSpec(table, "spare", &gSpare, false, true);
+    addSpec(table, "lofs", &gLofs, false, true);
+#elif defined(LOFS_NRF52)
+    if (flash2Present())
+        addSpec(table, "lofs", &gLofs, false, true);
 #endif
 
     addSpec(table, "internal", &gInternal, true, true);
