@@ -1,6 +1,7 @@
 [submodule "meshtastic"]
 	path = meshtastic
 	url = git@github.com:MeshEnvy/lobbs-meshtastic-firmware.git
+	branch = lobbs
 [submodule "lo-star"]
 	path = lo-star
 	url = git@github.com:MeshEnvy/lo-star.git
