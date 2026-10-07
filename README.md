@@ -31,6 +31,6 @@ The plugin is tagged `vX.Y.Z`. Each fork release is tagged `lobbs-vX.Y.Z.<lobbs 
 
 The forks stay upstream plus one new folder: `variants/lobbs/`, which defines the `*_lobbs` build envs and pulls in the plugin. No edits to upstream files. If an extension point is missing, the fix is the smallest possible change, listed here and paired with an upstream PR.
 
-Until extraction finishes, LoBBS code still lives in-tree at `lobbs-meshtastic-firmware/src/modules/LoBBS/`.
+Meshtastic integration lives in `lobbs-meshtastic-firmware` (`lobbs-overrides.ini`, `variants/lobbs/`). This repo is the plugin source.
 
 Architecture and greenfield rules: [`.cursor/rules/lobbs-project.mdc`](.cursor/rules/lobbs-project.mdc).

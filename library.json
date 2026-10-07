@@ -1,0 +1,29 @@
+{
+  "name": "lobbs",
+  "version": "2.0.0",
+  "description": "LoBBS on-firmware BBS for Meshtastic and MeshCore",
+  "keywords": ["meshtastic", "meshcore", "bbs", "lobbs"],
+  "authors": [{ "name": "MeshEnvy", "maintainer": true }],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MeshEnvy/lobbs.git"
+  },
+  "frameworks": ["arduino"],
+  "platforms": "*",
+  "build": {
+    "libArchive": false,
+    "libLDFMode": "deep+",
+    "srcDir": ".",
+    "srcFilter": [
+      "+<*>",
+      "-<docs/**>",
+      "-<bin/**>",
+      "-<tests/**>",
+      "-<.cursor/**>",
+      "-<logo.*>",
+      "-<social.*>"
+    ],
+    "extraScript": "platforms/meshtastic/extra_script.py"
+  }
+}

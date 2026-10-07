@@ -12,15 +12,15 @@ Cross-platform, on-firmware BBS for **Meshtastic** and **MeshCore**. Greenfield:
 **Plugin owns everything, forks stay upstream.**
 
 1. **Plugin** (this repo, PlatformIO library): core, apps, LoScalar, LoDB, LoFS, protocol, and the platform providers under `platforms/<platform>/`. On MeshCore the plugin also owns the firmware app (`setup()`/`loop()`).
-2. **Firmware forks** (`../lobbs-meshtastic-firmware`, `../lobbs-meshcore-firmware`, both on `lobbs`): upstream plus one new `variants/lobbs/` folder that defines the `*_lobbs` envs and pins the plugin in `lib_deps`.
+2. **Firmware forks** (`../lobbs-meshtastic-firmware`, `../lobbs-meshcore-firmware`, both on `lobbs`): upstream plus a thin overlay that pins the plugin in `lib_deps`. The Meshtastic fork enables LoBBS on every env.
 
 The repos are siblings under `/Volumes/Code/repos/meshenvy/`. No submodules anywhere: PlatformIO clones git deps with `--recursive`, and MeshForge builds a fork repo alone.
 
-Until extraction finishes, LoBBS code still lives in-tree at `../lobbs-meshtastic-firmware/src/modules/LoBBS/`.
+Meshtastic fork pulls this repo through `lib_deps` (see `../lobbs-meshtastic-firmware/lobbs-overrides.ini`).
 
 ## Fork diff policy
 
-- Allowed: one new `variants/lobbs/` folder per fork (ini, `.gitignore` for the local override, README pointer).
+- Allowed: fork overlay files (`lobbs-overrides.ini`, `lobbs.local.ini.example`, gitignored `lobbs.local.ini`) and minimal upstream edits listed in fork README.
 - No edits to upstream files. If an extension point is missing, make the smallest possible change, list it in [`README.md`](README.md), and open an upstream PR.
 
 ## Pins and releases

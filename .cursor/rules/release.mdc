@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Pins and releases
 
-Three sibling repos: `lobbs` (plugin), `lobbs-meshtastic-firmware`, `lobbs-meshcore-firmware`. Each fork's `variants/lobbs/` config pulls the plugin through `lib_deps`.
+Three sibling repos: `lobbs` (plugin), `lobbs-meshtastic-firmware`, `lobbs-meshcore-firmware`. Each fork pins the plugin through `lib_deps`. The Meshtastic fork enables LoBBS on every env.
 
 ## Local dev: symlink, never committed
 
@@ -14,10 +14,10 @@ Point a fork at the working copy with a gitignored override:
 | Fork | Override file | Content |
 | --- | --- | --- |
 | MeshCore | `platformio.local.ini` (already gitignored, already in `extra_configs`) | `lib_deps` with `lobbs=symlink://../lobbs` |
-| Meshtastic | `variants/lobbs/local.ini` (gitignored by `variants/lobbs/.gitignore`, picked up by the `variants/*/*.ini` glob) | same |
+| Meshtastic | `lobbs.local.ini` (gitignored, loaded last via `platformio.ini` `extra_configs`) | same |
 
 - `symlink://` never appears in a committed file. A pushed symlink breaks MeshForge and CI, because the path only exists locally.
-- Before pushing a fork, `git grep -n 'symlink://' -- variants/lobbs` must return nothing.
+- Before pushing a fork, `git grep -n 'symlink://'` on overlay ini files must return nothing.
 
 ## Committed pin
 
@@ -42,5 +42,5 @@ Pin by commit, not branch. A commit pin is immutable, and PlatformIO fetches it 
 ## Release procedure
 
 1. Plugin: update `CHANGELOG.md`, commit, `git tag -a vX.Y.Z`, push the tag.
-2. Each fork: set the committed `lib_deps` pin to the `vX.Y.Z` commit sha. Confirm no `symlink://` is committed. Build the `*_lobbs` envs from a clean clone.
+2. Each fork: set the committed `lib_deps` pin to the `vX.Y.Z` commit sha. Confirm no `symlink://` is committed. Build a representative env from a clean clone (`seeed_solar_node` on Meshtastic).
 3. Commit the pin bump, tag with the fork format above, push branch and tag.
