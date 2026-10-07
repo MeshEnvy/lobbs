@@ -1,0 +1,46 @@
+---
+description: LoBBS plugin pins, local symlink dev, and release tagging across the plugin and both firmware forks
+alwaysApply: true
+---
+
+# Pins and releases
+
+Three sibling repos: `lobbs` (plugin), `lobbs-meshtastic-firmware`, `lobbs-meshcore-firmware`. Each fork's `variants/lobbs/` config pulls the plugin through `lib_deps`.
+
+## Local dev: symlink, never committed
+
+Point a fork at the working copy with a gitignored override:
+
+| Fork | Override file | Content |
+| --- | --- | --- |
+| MeshCore | `platformio.local.ini` (already gitignored, already in `extra_configs`) | `lib_deps` with `lobbs=symlink://../lobbs` |
+| Meshtastic | `variants/lobbs/local.ini` (gitignored by `variants/lobbs/.gitignore`, picked up by the `variants/*/*.ini` glob) | same |
+
+- `symlink://` never appears in a committed file. A pushed symlink breaks MeshForge and CI, because the path only exists locally.
+- Before pushing a fork, `git grep -n 'symlink://' -- variants/lobbs` must return nothing.
+
+## Committed pin
+
+```ini
+lobbs=https://github.com/MeshEnvy/lobbs.git#<full 40-char plugin commit sha>
+```
+
+Pin by commit, not branch. A commit pin is immutable, and PlatformIO fetches it without a recursive clone.
+
+## Tags
+
+| Repo | Format | Example |
+| --- | --- | --- |
+| `lobbs` | `vX.Y.Z` | `v2.1.0` |
+| `lobbs-meshtastic-firmware` | `lobbs-vX.Y.Z.<lobbs sha7>-meshtastic-v<upstream version>.<upstream sha7>` | `lobbs-v2.1.0.abc1234-meshtastic-v2.7.15.567b8ea` |
+| `lobbs-meshcore-firmware` | `lobbs-vX.Y.Z.<lobbs sha7>-meshcore-v<upstream version>.<upstream sha7>` | `lobbs-v2.1.0.abc1234-meshcore-v1.9.1.def5678` |
+
+- `<lobbs sha7>` is the plugin commit the fork pins (the `vX.Y.Z` tag's commit).
+- `<upstream version>.<upstream sha7>` is the upstream release and commit the fork's `lobbs` branch is based on (`git merge-base lobbs upstream/<branch>`).
+- Annotated tags only (`git tag -a`).
+
+## Release procedure
+
+1. Plugin: update `CHANGELOG.md`, commit, `git tag -a vX.Y.Z`, push the tag.
+2. Each fork: set the committed `lib_deps` pin to the `vX.Y.Z` commit sha. Confirm no `symlink://` is committed. Build the `*_lobbs` envs from a clean clone.
+3. Commit the pin bump, tag with the fork format above, push branch and tag.

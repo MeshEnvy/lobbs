@@ -1,18 +1,18 @@
 ---
-description: Monorepo conventional commit message format
+description: Conventional commit message format for the LoBBS plugin repo
 alwaysApply: true
 ---
 
 # Commit Message Convention
 
-Use monorepo-style conventional commit messages for all git commits.
+Use conventional commit messages for all git commits.
 
 ## Format
 
 `type(scope): subject`
 
 - `type` is a conventional commit type like `feat`, `fix`, `chore`, `docs`, `refactor`, or `test`.
-- `scope` should identify the monorepo package or area (for example `lobbs`, `meshtastic`, `meshcore`, `repo`).
+- `scope` should identify the plugin area (for example `core`, `apps`, `lodb`, `lofs`, `meshtastic`, `meshcore`, `repo`). `meshtastic` and `meshcore` mean the platform providers under `platforms/`.
 - `subject` must be concise, imperative, and lowercase when possible.
 
 ## Limits
@@ -21,5 +21,5 @@ Use monorepo-style conventional commit messages for all git commits.
 
 ## Examples
 
-- `feat(lobbs): add meshcore platform provider`
-- `chore(meshcore): bump pin`
+- `feat(meshcore): add chat mesh platform provider`
+- `fix(lodb): flush index on record delete`

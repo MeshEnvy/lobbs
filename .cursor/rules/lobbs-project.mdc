@@ -11,20 +11,21 @@ Cross-platform, on-firmware BBS for **Meshtastic** and **MeshCore**. Greenfield:
 
 **Plugin owns everything, forks stay upstream.**
 
-1. **Plugin** (`lobbs/`, PlatformIO library): core, apps, LoScalar, LoDB, LoFS, protocol, and the platform providers under `lobbs/platforms/<platform>/`. On MeshCore the plugin also owns the firmware app (`setup()`/`loop()`).
-2. **Firmware forks** ([`meshtastic/`](meshtastic/), [`meshcore/`](meshcore/) submodules, both on `lobbs`): upstream plus one new `variants/lobbs/*.ini` that defines the `*_lobbs` envs and pulls in the plugin.
+1. **Plugin** (this repo, PlatformIO library): core, apps, LoScalar, LoDB, LoFS, protocol, and the platform providers under `platforms/<platform>/`. On MeshCore the plugin also owns the firmware app (`setup()`/`loop()`).
+2. **Firmware forks** (`../lobbs-meshtastic-firmware`, `../lobbs-meshcore-firmware`, both on `lobbs`): upstream plus one new `variants/lobbs/` folder that defines the `*_lobbs` envs and pins the plugin in `lib_deps`.
 
-Until extraction finishes, LoBBS code still lives in-tree at `meshtastic/src/modules/LoBBS/`.
+The repos are siblings under `/Volumes/Code/repos/meshenvy/`. No submodules anywhere: PlatformIO clones git deps with `--recursive`, and MeshForge builds a fork repo alone.
+
+Until extraction finishes, LoBBS code still lives in-tree at `../lobbs-meshtastic-firmware/src/modules/LoBBS/`.
 
 ## Fork diff policy
 
-- Allowed: one new `variants/lobbs/` ini per fork.
+- Allowed: one new `variants/lobbs/` folder per fork (ini, `.gitignore` for the local override, README pointer).
 - No edits to upstream files. If an extension point is missing, make the smallest possible change, list it in [`README.md`](README.md), and open an upstream PR.
 
-## Workflow
+## Pins and releases
 
-- Work inside the submodules; commit and push there, then commit the pin bump here.
-- Keep both submodules on `lobbs` (`.gitmodules` `branch = lobbs`).
+Local dev uses a gitignored `symlink://../lobbs` override. Committed fork config only ever pins a plugin commit. Tagging and pin procedure: [`release.mdc`](release.mdc).
 
 ## Style
 

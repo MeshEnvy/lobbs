@@ -1,36 +1,36 @@
 # LoBBS
 
-On-firmware bulletin board for **Meshtastic** and **MeshCore**. This umbrella repo holds the firmware forks as submodules. The portable LoBBS plugin (core, apps, storage, and both platform providers) will live in `lobbs/` once it is extracted from the Meshtastic fork.
+On-firmware bulletin board for **Meshtastic** and **MeshCore**. This repo is the portable LoBBS plugin, a PlatformIO library: core, apps, storage, and both platform providers. It is being extracted from the Meshtastic fork.
 
-## Submodules
+## Firmware forks
 
-| Path | Repo | Branch |
-| --- | --- | --- |
-| [`meshtastic/`](meshtastic/) | [MeshEnvy/lobbs-meshtastic-firmware](https://github.com/MeshEnvy/lobbs-meshtastic-firmware) | `lobbs` |
-| [`meshcore/`](meshcore/) | [MeshEnvy/lobbs-meshcore-firmware](https://github.com/MeshEnvy/lobbs-meshcore-firmware) | `lobbs` |
+| Repo | Branch |
+| --- | --- |
+| [MeshEnvy/lobbs-meshtastic-firmware](https://github.com/MeshEnvy/lobbs-meshtastic-firmware) | `lobbs` |
+| [MeshEnvy/lobbs-meshcore-firmware](https://github.com/MeshEnvy/lobbs-meshcore-firmware) | `lobbs` |
 
-## Setup
+Each fork builds standalone. Its `variants/lobbs/` config pins this plugin by commit in `lib_deps`, so cloning one fork is enough to build it.
 
-```bash
-git clone --recurse-submodules git@github.com:MeshEnvy/lobbs.git
-# or, in an existing clone:
-git submodule update --init --recursive
-```
+## Local development
 
-## Workflow
-
-Work inside the submodules. Commit and push there, then commit the pin bump here.
+Clone the plugin and the forks side by side:
 
 ```bash
-cd meshtastic && git checkout lobbs && git pull --ff-only
-# edit, build, commit, push in the submodule
-cd .. && git add meshtastic && git commit -m "chore(meshtastic): bump pin"
+git clone git@github.com:MeshEnvy/lobbs.git
+git clone -b lobbs git@github.com:MeshEnvy/lobbs-meshtastic-firmware.git
+git clone -b lobbs git@github.com:MeshEnvy/lobbs-meshcore-firmware.git
 ```
+
+Point a fork at your working copy with a gitignored override that sets `lib_deps` to `symlink://../lobbs`. Committed config always carries the real pin. Details: [`.cursor/rules/release.mdc`](.cursor/rules/release.mdc).
+
+## Releases
+
+The plugin is tagged `vX.Y.Z`. Each fork release is tagged `lobbs-vX.Y.Z.<lobbs sha7>-<platform>-v<upstream version>.<upstream sha7>`, for example `lobbs-v2.1.0.abc1234-meshtastic-v2.7.15.567b8ea`. Full procedure: [`.cursor/rules/release.mdc`](.cursor/rules/release.mdc).
 
 ## Fork diff policy
 
-The forks stay upstream plus one new config file: `variants/lobbs/*.ini`, which defines the `*_lobbs` build envs and pulls in the plugin. No edits to upstream files. If an extension point is missing, the fix is the smallest possible change, listed here and paired with an upstream PR.
+The forks stay upstream plus one new folder: `variants/lobbs/`, which defines the `*_lobbs` build envs and pulls in the plugin. No edits to upstream files. If an extension point is missing, the fix is the smallest possible change, listed here and paired with an upstream PR.
 
-Until extraction finishes, LoBBS code still lives in-tree at `meshtastic/src/modules/LoBBS/`.
+Until extraction finishes, LoBBS code still lives in-tree at `lobbs-meshtastic-firmware/src/modules/LoBBS/`.
 
 Architecture and greenfield rules: [`.cursor/rules/lobbs-project.mdc`](.cursor/rules/lobbs-project.mdc).
