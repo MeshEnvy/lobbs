@@ -1,6 +1,6 @@
 ---
 description: LoBBS plugin pins, local symlink dev, and release tagging across the plugin and both firmware forks
-alwaysApply: true
+alwaysApply: false
 ---
 
 # Pins and releases

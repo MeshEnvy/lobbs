@@ -1,6 +1,6 @@
 ---
 description: Conventional commit message format for the LoBBS plugin repo
-alwaysApply: true
+alwaysApply: false
 ---
 
 # Commit Message Convention

@@ -1,6 +1,6 @@
 ---
 description: LoBBS project context. Greenfield on-firmware BBS for Meshtastic + MeshCore, plugin + thin forks
-alwaysApply: true
+alwaysApply: false
 ---
 
 # LoBBS
